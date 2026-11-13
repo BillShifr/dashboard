@@ -42,3 +42,5 @@ npx playwright install chromium   # один раз на машине разра
 `CONTAINER_ENGINE=podman sh scripts/update-production.sh` из `$HOME/apps/dashboard`.
 
 Nginx: `deploy/nginx/dashboard.tfoms.conf` → `127.0.0.1:3090`.
+
+Репозиторий: https://github.com/BillShifr/dashboard (private).
