@@ -1,0 +1,163 @@
+.shell {
+  display: grid;
+  gap: 16px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tabs,
+.exports,
+.zoom {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tabs button,
+.exports button,
+.zoom button,
+.ghost,
+.primary {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 8px 12px;
+}
+
+.tabs button[aria-pressed="true"],
+.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.canvas,
+.side {
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 14px;
+}
+
+.canvasHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mapScroll {
+  overflow: auto;
+  background: linear-gradient(180deg, #f7faf6, #eef3ee);
+  border: 1px solid var(--line);
+  max-height: 70vh;
+}
+
+.map {
+  min-width: 100%;
+}
+
+.map :global(svg) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.side {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.field input,
+.field select,
+.side input[type="search"] {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+}
+
+.list {
+  display: grid;
+  gap: 6px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.list button {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.list button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.status {
+  margin: 0;
+  font-size: 14px;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatches button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cfd8d0;
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}

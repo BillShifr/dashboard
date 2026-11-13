@@ -1,0 +1,12 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+package-lock.json
+src/domain/_legacy/**
+src/domain/shared/glyphs.js
+src/domain/territory/catalog/**/*.js
+src/domain/territory/medical/scales.js
+src/domain/disp/catalog/institutions.ts
+src/domain/disp/catalog/groups.ts

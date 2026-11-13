@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18.1-alpine
+        env:
+          POSTGRES_DB: dashboard_test
+          POSTGRES_USER: dashboard
+          POSTGRES_PASSWORD: dashboard
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U dashboard -d dashboard_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://dashboard:dashboard@127.0.0.1:5432/dashboard_test
+      APP_ORIGIN: http://127.0.0.1:3091
+      INITIAL_ADMIN_PASSWORD: CI-only-password-2026!
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 26.13.0
+          cache: npm
+      - run: npm ci
+      - run: npm run audit:ci
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run verify
+      - name: Deployment script syntax
+        run: find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 sh -n
+      - name: Compose configuration
+        run: docker compose config --quiet
+        env:
+          POSTGRES_PASSWORD: ci-only-database-password
+          CONTAINER_DATABASE_URL: postgres://dashboard:ci-only-database-password@db:5432/dashboard
+          VCS_REF: ${{ github.sha }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: verify
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build runtime image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: runtime
+          load: true
+          push: false
+          build-args: VCS_REF=${{ github.sha }}
+          tags: dashboard:${{ github.sha }}
+      - name: Build migrator image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: migrator
+          load: true
+          push: false
+          build-args: VCS_REF=${{ github.sha }}
+          tags: dashboard-migrator:${{ github.sha }}

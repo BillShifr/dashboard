@@ -1,0 +1,12 @@
+/** Generic vector shape used by SVG/PDF exporters. */
+
+export type Shape = {
+  d: string;
+  fill?: string;
+  stroke?: string;
+  width?: number;
+  group?: string | null;
+  facility?: string;
+  label?: string;
+  bbox?: [number, number, number, number];
+};

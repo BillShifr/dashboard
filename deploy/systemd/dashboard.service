@@ -1,0 +1,15 @@
+[Unit]
+Description=Dashboard (Югра) Podman Compose
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/apps/dashboard
+Environment=CONTAINER_ENGINE=podman
+ExecStart=/usr/bin/podman compose up -d db app
+ExecStop=/usr/bin/podman compose stop app
+
+[Install]
+WantedBy=default.target
