@@ -3,6 +3,9 @@ import type { Shape } from "@/domain/shared/types";
 export type PdfPage = {
   shapes: Shape[];
   height: number;
+  width?: number;
+  originX?: number;
+  originY?: number;
 };
 
 /** Build a PDF Blob from pre-rendered shape pages (HTML `pdfBlob` algorithm). */
@@ -13,9 +16,15 @@ export function shapesPagesToPdfBlob(pages: PdfPage[]): Blob {
       .map((x) => (parseInt(x, 16) / 255).toFixed(4))
       .join(" ");
 
-  function commands(d: string, height: number): string {
-    const x = (v: number | string) => (Number(v) + 20).toFixed(3);
-    const y = (v: number | string) => (height - 15 - Number(v)).toFixed(3);
+  function commands(
+    d: string,
+    height: number,
+    originX: number,
+    originY: number,
+  ): string {
+    const x = (v: number | string) => (Number(v) - originX).toFixed(3);
+    const y = (v: number | string) =>
+      (height - (Number(v) - originY)).toFixed(3);
     let out = "";
     let px = 0;
     let py = 0;
@@ -45,17 +54,23 @@ export function shapesPagesToPdfBlob(pages: PdfPage[]): Blob {
     const pageId = objects.length + 1;
     const streamId = pageId + 1;
     pageIds.push(pageId);
+    const originX = page.originX ?? -20;
+    const originY = page.originY ?? -15;
+    const pageWidth = page.width ?? 540;
     let stream = "1 J 1 j\n";
     for (const s of page.shapes) {
       const fill = s.fill && s.fill !== "none";
       if (fill) stream += rgb(s.fill!) + " rg\n";
-      if (s.stroke) stream += rgb(s.stroke) + " RG\n" + s.width + " w\n";
+      if (s.stroke) {
+        stream += rgb(s.stroke) + " RG\n" + s.width + " w\n";
+        stream += s.linejoin === "miter" ? "0 J 0 j\n" : "1 J 1 j\n";
+      }
       stream +=
-        commands(s.d, page.height) +
+        commands(s.d, page.height, originX, originY) +
         (s.stroke ? (fill ? "B\n" : "S\n") : "f\n");
     }
     objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 540 ${page.height}] /Resources << >> /Contents ${streamId} 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${page.height}] /Resources << >> /Contents ${streamId} 0 R >>`,
       `<< /Length ${stream.length} >>\nstream\n${stream}endstream`,
     );
   }

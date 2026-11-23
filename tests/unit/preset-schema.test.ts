@@ -12,6 +12,20 @@ describe("preset payload schemas", () => {
     ).not.toThrow();
   });
 
+  it("keeps okrug honeycomb payload on incident-8 territory", () => {
+    const parsed = parsePresetPayload("territory", defaultTerritoryPayload());
+    expect(parsed).toMatchObject({ mode: "geo" });
+    expect("okrug" in parsed && parsed.okrug?.templateId).toBe(
+      "salary-doctors",
+    );
+  });
+
+  it("accepts legacy territory payload without okrug", () => {
+    const legacy = { ...defaultTerritoryPayload() };
+    delete legacy.okrug;
+    expect(() => parsePresetPayload("territory", legacy)).not.toThrow();
+  });
+
   it("accepts default dispanserization payload", () => {
     expect(() =>
       parsePresetPayload("dispanserization", defaultDispanserizationPayload()),

@@ -14,6 +14,7 @@ export const roleEnum = pgEnum("role", ["viewer", "editor", "admin"]);
 export const presetKindEnum = pgEnum("preset_kind", [
   "territory",
   "dispanserization",
+  "okrug",
 ]);
 
 const timestamps = {

@@ -7,6 +7,10 @@ export type ShapesToSvgOptions = {
   selectedFacility?: string | null;
   groupTitle?: (id: string) => string;
   facilityTitle?: (id: string) => string;
+  viewBox?: string;
+  svgWidth?: number;
+  svgHeight?: number;
+  ariaLabel?: string;
 };
 
 export function shapesToSvg(
@@ -18,9 +22,13 @@ export function shapesToSvg(
     selectedFacility = null,
     groupTitle,
     facilityTitle,
+    viewBox = `-20 -15 540 ${height}`,
+    svgWidth = 2160,
+    svgHeight = height * 4,
+    ariaLabel = "Карта Югры",
   }: ShapesToSvgOptions = {},
 ): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -15 540 ${height}" width="2160" height="${height * 4}" role="group" aria-label="Карта Югры">${shapes
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${svgWidth}" height="${svgHeight}" role="group" aria-label="${escapeXml(ariaLabel)}">${shapes
     .map((s) => {
       const target = s.facility
         ? `data-facility="${s.facility}"`
@@ -33,7 +41,11 @@ export function shapesToSvg(
         : s.group
           ? (groupTitle?.(s.group) ?? "")
           : "";
-      return `<path d="${s.d}" fill="${s.fill || "none"}" ${s.stroke ? `stroke="${s.stroke}" stroke-width="${s.width}" stroke-linejoin="round"` : ""} ${interactive ? target : ""} ${s.label ? `pointer-events="none" data-label="${escapeXml(s.label)}"` : ""} ${button ? `role="button" tabindex="0" aria-label="${escapeXml(title)}" aria-pressed="${s.facility ? s.facility === selectedFacility : !selectedFacility && s.group === selectedGroup}"` : ""}></path>`;
+      const join = s.linejoin ?? "round";
+      const stroke = s.stroke
+        ? `stroke="${s.stroke}" stroke-width="${s.width}" stroke-linejoin="${join}"${join === "miter" ? ` stroke-miterlimit="8"` : ""}`
+        : "";
+      return `<path d="${s.d}" fill="${s.fill || "none"}" ${stroke} ${interactive ? target : ""} ${s.label ? `pointer-events="none" data-label="${escapeXml(s.label)}"` : ""} ${button ? `role="button" tabindex="0" aria-label="${escapeXml(title)}" aria-pressed="${s.facility ? s.facility === selectedFacility : !selectedFacility && s.group === selectedGroup}"` : ""}></path>`;
     })
     .join("")}</svg>`;
 }

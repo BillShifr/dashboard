@@ -5,6 +5,7 @@ export type Shape = {
   fill?: string;
   stroke?: string;
   width?: number;
+  linejoin?: "round" | "miter";
   group?: string | null;
   facility?: string;
   label?: string;

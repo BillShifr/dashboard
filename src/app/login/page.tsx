@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { currentUser } from "@/lib/auth";
-import styles from "./login.module.css";
 
 export default async function LoginPage({
   searchParams,
@@ -10,37 +18,60 @@ export default async function LoginPage({
   if (await currentUser()) redirect("/presets");
   const { error } = await searchParams;
   return (
-    <main className={styles.page}>
-      <section className={styles.intro}>
-        <div className={styles.logo}>Югра</div>
+    <main className="grid min-h-svh lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="flex flex-col justify-end gap-6 bg-primary px-10 py-12 text-primary-foreground">
+        <p className="text-[11px] font-medium tracking-[0.18em] uppercase opacity-80">
+          ТФОМС Югры
+        </p>
         <div>
-          <h1>Dashboard</h1>
-          <p>Карты территорий и диспансеризация</p>
+          <h1 className="font-display text-4xl font-semibold tracking-tight">
+            Dashboard
+          </h1>
+          <p className="mt-2 max-w-sm text-sm text-primary-foreground/80">
+            Карты округа, территорий и диспансеризации для докладов
+          </p>
         </div>
       </section>
-      <section className={styles.formSide}>
-        <form className={styles.form} action="/api/auth/login" method="post">
-          <h2>Вход</h2>
-          {error && (
-            <p className={styles.error} role="alert">
-              Неверный логин или пароль
-            </p>
-          )}
-          <label className={styles.field}>
-            Логин
-            <input name="login" autoComplete="username" required />
-          </label>
-          <label className={styles.field}>
-            Пароль
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
-          <button className={styles.button}>Войти</button>
-        </form>
+      <section className="grid place-items-center p-8">
+        <Card className="w-full max-w-sm py-6 shadow-sm">
+          <CardHeader className="px-6">
+            <h1 className="font-display text-base leading-snug font-medium">
+              Вход
+            </h1>
+            <CardDescription>Служебный доступ к редактору карт</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-4" action="/api/auth/login" method="post">
+              {error ? (
+                <p className="text-sm text-destructive" role="alert">
+                  Неверный логин или пароль
+                </p>
+              ) : null}
+              <div className="grid gap-2">
+                <Label htmlFor="login">Логин</Label>
+                <Input
+                  id="login"
+                  name="login"
+                  autoComplete="username"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Пароль</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+              <Button type="submit" className="mt-1 w-full">
+                Войти
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </section>
     </main>
   );

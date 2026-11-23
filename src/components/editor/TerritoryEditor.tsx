@@ -1,9 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import { ExportMenu } from "@/components/editor/ExportMenu";
 import { MapCanvas } from "@/components/editor/MapCanvas";
+import { ZoomControl } from "@/components/editor/ZoomControl";
 import styles from "@/components/editor/editor.module.css";
-import type { TerritoryPayload } from "@/domain/presets/schema";
+import { OkrugEditor } from "@/components/editor/OkrugEditor";
+import { okrugSlideSections } from "@/components/editor/okrug-slide-sections";
+import { useConstructor } from "@/components/shell/constructor-context";
+import { mapDisplaySidebarItems } from "@/components/shell/map-display-sidebar";
+import type { MapDisplayViewId } from "@/components/shell/report-display-views";
+import { defaultOkrugPayload } from "@/domain/presets/defaults";
+import type { OkrugPayload, TerritoryPayload } from "@/domain/presets/schema";
+import { Button } from "@/components/ui/button";
 import { downloadBlob, svgToPngBlob } from "@/domain/shared/png";
 import { NAMES, PALETTE } from "@/domain/territory/catalog/meta";
 import { facilities } from "@/domain/territory/catalog/facilities.js";
@@ -37,9 +46,14 @@ const parse = parseValue as (text: string) => {
 };
 
 type Props = {
+  presetId: string;
   payload: TerritoryPayload;
   disabled: boolean;
   onChange: (next: TerritoryPayload) => void;
+  onServerPreset: (preset: {
+    version: number;
+    payload: TerritoryPayload;
+  }) => void;
   onSave: () => void;
   pending: boolean;
   status: string | null;
@@ -47,9 +61,11 @@ type Props = {
 };
 
 export function TerritoryEditor({
+  presetId,
   payload,
   disabled,
   onChange,
+  onServerPreset,
   onSave,
   pending,
   status,
@@ -61,6 +77,7 @@ export function TerritoryEditor({
   const [query, setQuery] = useState("");
   const [exportBusy, setExportBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const { setSections, setToolbar } = useConstructor();
 
   const medical = payload.mode === "med";
   const active = medical
@@ -156,322 +173,365 @@ export function TerritoryEditor({
     }
   }
 
+  const honeycomb = useMemo(
+    () => payload.okrug ?? defaultOkrugPayload(),
+    [payload.okrug],
+  );
+  const honeycombView = payload.mode === "hex";
+
+  const patchOkrug = useCallback(
+    (next: OkrugPayload) => {
+      onChange({ ...payload, mode: "hex", okrug: next });
+    },
+    [onChange, payload],
+  );
+
+  const handleOkrugServerPreset = useCallback(
+    (preset: { version: number; payload: OkrugPayload }) => {
+      onServerPreset({
+        version: preset.version,
+        payload: {
+          ...payload,
+          mode: "hex",
+          okrug: preset.payload,
+        },
+      });
+    },
+    [onServerPreset, payload],
+  );
+
+  function setDisplayView(next: MapDisplayViewId) {
+    if (next === "hex") {
+      patch({
+        mode: "hex",
+        medicalBase: "geo",
+        okrug: payload.okrug ?? honeycomb,
+      });
+      setZoom(1);
+      return;
+    }
+    if (next === "med") {
+      setMode("med");
+      return;
+    }
+    setMode("geo");
+  }
+
+  function setMode(next: TerritoryPayload["mode"]) {
+    const medicalBase =
+      next === "med" && payload.mode !== "med" ? "geo" : payload.medicalBase;
+    patch({ mode: next, medicalBase });
+    setZoom(1);
+  }
+
+  useLayoutEffect(() => {
+    const activeView: MapDisplayViewId =
+      payload.mode === "med" ? "med" : payload.mode === "hex" ? "hex" : "geo";
+    const display: {
+      title: string;
+      items: ReturnType<typeof mapDisplaySidebarItems>;
+    }[] = [
+      {
+        title: "Отображение",
+        items: mapDisplaySidebarItems("territory", activeView, setDisplayView, {
+          disabled,
+        }),
+      },
+    ];
+    if (honeycombView) {
+      display.push(...okrugSlideSections(honeycomb, patchOkrug, disabled));
+    }
+    setSections(display);
+    // setDisplayView/patchOkrug recreate each render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payload.mode, payload.okrug, payload.medicalBase, disabled, setSections]);
+
+  useLayoutEffect(() => {
+    if (honeycombView) return;
+    setToolbar(
+      <>
+        <ExportMenu busy={exportBusy} onPng={exportPng} onPdf={exportPdf} />
+        {!disabled && (
+          <Button
+            type="button"
+            size="sm"
+            data-testid="save-preset"
+            title="Записать значения и настройки карты в базу"
+            disabled={pending}
+            onClick={onSave}
+          >
+            {pending ? "Сохранение…" : "Сохранить отчёт"}
+          </Button>
+        )}
+      </>,
+    );
+    // export handlers close over payload from this render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled, exportBusy, pending, setToolbar, onSave, honeycombView]);
+
+  if (honeycombView) {
+    return (
+      <OkrugEditor
+        presetId={presetId}
+        payload={honeycomb}
+        disabled={disabled}
+        pending={pending}
+        status={status}
+        version={version}
+        manageSections={false}
+        onChange={patchOkrug}
+        onServerPreset={handleOkrugServerPreset}
+        onSave={onSave}
+      />
+    );
+  }
+
   return (
     <div className={styles.shell}>
-      <div className={styles.toolbar}>
-        <div className={styles.tabs} role="group" aria-label="Вид схемы">
-          {(["geo", "hex", "med"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              aria-pressed={payload.mode === mode}
-              disabled={disabled}
-              onClick={() => {
-                const medicalBase =
-                  mode === "med" && payload.mode !== "med"
-                    ? payload.mode === "hex"
-                      ? "hex"
-                      : "geo"
-                    : payload.medicalBase;
-                patch({ mode, medicalBase });
-                setZoom(1);
-              }}
-            >
-              {mode === "geo"
-                ? "Карта"
-                : mode === "hex"
-                  ? "Шестиугольники"
-                  : "Медучреждения"}
-            </button>
-          ))}
-        </div>
-        <div className={styles.exports}>
-          <button
-            type="button"
-            className={styles.ghost}
-            disabled={exportBusy}
-            onClick={exportPng}
-          >
-            PNG
-          </button>
-          <button
-            type="button"
-            className={styles.ghost}
-            disabled={exportBusy}
-            onClick={exportPdf}
-          >
-            PDF
-          </button>
-          {!disabled && (
-            <button
-              type="button"
-              className={styles.primary}
-              data-testid="save-preset"
-              disabled={pending}
-              onClick={onSave}
-            >
-              {pending ? "Сохранение…" : "Сохранить"}
-            </button>
-          )}
-          <span className={styles.muted}>v{version}</span>
-        </div>
-      </div>
-
-      <div className={styles.workspace}>
-        <section className={styles.canvas} aria-label="Карта">
-          <div className={styles.canvasHeader}>
-            <span>{medical ? `${FACILITIES.length} БУ` : "9 районов"}</span>
-            <div className={styles.zoom}>
-              <button
-                type="button"
-                disabled={zoom <= 1}
-                onClick={() => setZoom((z) => Math.max(1, z - 0.5))}
-              >
-                −
-              </button>
-              <span>{Math.round(zoom * 100)}%</span>
-              <button
-                type="button"
-                disabled={zoom >= 3}
-                onClick={() => setZoom((z) => Math.min(3, z + 0.5))}
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <MapCanvas
-            svg={svg}
+      <section className={styles.canvas} aria-label="Карта">
+        <div className={styles.canvasHeader}>
+          <span>{medical ? `${FACILITIES.length} БУ` : "9 районов"}</span>
+          <ZoomControl
             zoom={zoom}
-            onSelectGroup={(id) => setSelected(Number(id))}
-            onSelectFacility={(id) => {
-              setSelectedFacility(id);
-              if (!medical) patch({ mode: "med" });
-            }}
+            min={1}
+            max={3}
+            step={0.5}
+            onChange={setZoom}
           />
-        </section>
+        </div>
+        <MapCanvas
+          svg={svg}
+          zoom={zoom}
+          onSelectGroup={(id) => setSelected(Number(id))}
+          onSelectFacility={(id) => {
+            setSelectedFacility(id);
+            if (!medical) patch({ mode: "med" });
+          }}
+        />
+      </section>
 
-        <aside className={styles.side}>
-          {medical ? (
-            <>
-              <label className={styles.field}>
-                Поиск учреждения
-                <input
-                  type="search"
-                  value={query}
-                  disabled={disabled}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </label>
-              <div className={styles.list}>
-                {facilityList.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    aria-pressed={f.id === selectedFacility}
-                    disabled={disabled}
-                    onClick={() => setSelectedFacility(f.id)}
-                  >
-                    <span
-                      className={styles.dot}
-                      style={{
-                        background: colorOf(
-                          payload.records[f.id] ?? {
-                            value: null,
-                            manual: null,
-                          },
-                          payload.scale,
-                        ),
-                      }}
-                    />
-                    <span>
-                      <strong>
-                        {f.index}. {f.name.replace(/^БУ /, "")}
-                      </strong>
-                      <br />
-                      <span className={styles.muted}>
-                        {f.city} · {f.id}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className={styles.list}>
-              {NAMES.map((name, i) => {
-                const fill = colorOf(payload.items[i]!, payload.scale);
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    aria-pressed={selected === i}
-                    disabled={disabled}
-                    onClick={() => setSelected(i)}
-                    style={{ background: fill, color: "#213A2C" }}
-                  >
-                    <span className={styles.dot} style={{ background: fill }} />
-                    <span>
-                      {i + 1}. {name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <h2 style={{ margin: 0, fontSize: 18 }}>
-            {medical
-              ? FACILITIES.find((f) => f.id === selectedFacility)?.name.replace(
-                  /^БУ /,
-                  "",
-                )
-              : NAMES[selected]}
-          </h2>
-
-          {medical && (
+      <aside className={styles.side}>
+        <p className={styles.inspectorTitle}>Инспектор</p>
+        {medical ? (
+          <>
             <label className={styles.field}>
-              Основа
-              <select
-                value={payload.medicalBase}
+              Поиск учреждения
+              <input
+                type="search"
+                value={query}
                 disabled={disabled}
-                onChange={(e) =>
-                  patch({
-                    medicalBase: e.target
-                      .value as TerritoryPayload["medicalBase"],
-                  })
-                }
-              >
-                <option value="geo">Карта</option>
-                <option value="hex">Шестиугольники</option>
-              </select>
+                onChange={(e) => setQuery(e.target.value)}
+              />
             </label>
-          )}
+            <div className={styles.list}>
+              {facilityList.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  aria-pressed={f.id === selectedFacility}
+                  disabled={disabled}
+                  onClick={() => setSelectedFacility(f.id)}
+                >
+                  <span
+                    className={styles.dot}
+                    style={{
+                      background: colorOf(
+                        payload.records[f.id] ?? {
+                          value: null,
+                          manual: null,
+                        },
+                        payload.scale,
+                      ),
+                    }}
+                  />
+                  <span>
+                    <strong>
+                      {f.index}. {f.name.replace(/^БУ /, "")}
+                    </strong>
+                    <br />
+                    <span className={styles.muted}>
+                      {f.city} · {f.id}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className={styles.list}>
+            {NAMES.map((name, i) => {
+              const fill = colorOf(payload.items[i]!, payload.scale);
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  aria-pressed={selected === i}
+                  disabled={disabled}
+                  onClick={() => setSelected(i)}
+                  style={{ background: fill, color: "#213A2C" }}
+                >
+                  <span className={styles.dot} style={{ background: fill }} />
+                  <span>
+                    {i + 1}. {name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
+        <h2 style={{ margin: 0, fontSize: 18 }}>
+          {medical
+            ? FACILITIES.find((f) => f.id === selectedFacility)?.name.replace(
+                /^БУ /,
+                "",
+              )
+            : NAMES[selected]}
+        </h2>
+
+        {medical && (
           <label className={styles.field}>
-            Шкала
+            Основа
             <select
-              value={payload.scale}
+              value={payload.medicalBase}
               disabled={disabled}
               onChange={(e) =>
-                patch({ scale: e.target.value as TerritoryPayload["scale"] })
+                patch({
+                  medicalBase: e.target
+                    .value as TerritoryPayload["medicalBase"],
+                })
               }
             >
-              {Object.entries(scales as Record<string, { name: string }>).map(
-                ([id, scale]) => (
-                  <option key={id} value={id}>
-                    {scale.name}
-                  </option>
-                ),
-              )}
+              <option value="geo">Карта</option>
+              <option value="hex">Шестиугольники</option>
             </select>
           </label>
+        )}
 
-          <label className={styles.field}>
-            Значение, %
-            <input
-              value={
-                ("value" in active ? active.value : null) === null
-                  ? ""
-                  : String(active.value).replace(".", ",")
-              }
-              disabled={disabled}
-              onChange={(e) => {
-                const parsed = parse(e.target.value);
-                if (!parsed.valid) return;
-                if (medical) {
-                  patch({
-                    records: {
-                      ...payload.records,
-                      [selectedFacility]: {
-                        value: parsed.value,
-                        manual: null,
-                      },
+        <label className={styles.field}>
+          Шкала
+          <select
+            value={payload.scale}
+            disabled={disabled}
+            onChange={(e) =>
+              patch({ scale: e.target.value as TerritoryPayload["scale"] })
+            }
+          >
+            {Object.entries(scales as Record<string, { name: string }>).map(
+              ([id, scale]) => (
+                <option key={id} value={id}>
+                  {scale.name}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className={styles.field}>
+          Значение, %
+          <input
+            value={
+              ("value" in active ? active.value : null) === null
+                ? ""
+                : String(active.value).replace(".", ",")
+            }
+            disabled={disabled}
+            onChange={(e) => {
+              const parsed = parse(e.target.value);
+              if (!parsed.valid) return;
+              if (medical) {
+                patch({
+                  records: {
+                    ...payload.records,
+                    [selectedFacility]: {
+                      value: parsed.value,
+                      manual: null,
                     },
-                  });
-                } else {
-                  const items = payload.items.map((item, i) =>
-                    i === selected
-                      ? { ...item, value: parsed.value, manual: null }
-                      : item,
-                  );
-                  patch({ items });
-                }
-              }}
-            />
-          </label>
+                  },
+                });
+              } else {
+                const items = payload.items.map((item, i) =>
+                  i === selected
+                    ? { ...item, value: parsed.value, manual: null }
+                    : item,
+                );
+                patch({ items });
+              }
+            }}
+          />
+        </label>
 
-          <label className={styles.field}>
-            Цвет
-            <input
-              type="color"
-              value={activeFill}
-              disabled={disabled}
-              onChange={(e) => setActiveManual(e.target.value)}
-            />
-          </label>
-          <div className={styles.swatches}>
-            {PALETTE.map((color) => (
-              <button
-                key={color}
-                type="button"
-                aria-label={color}
-                disabled={disabled}
-                style={{ background: color }}
-                onClick={() => setActiveManual(color)}
-              />
-            ))}
-          </div>
-          {active.manual && (
+        <label className={styles.field}>
+          Цвет
+          <input
+            type="color"
+            value={activeFill}
+            disabled={disabled}
+            onChange={(e) => setActiveManual(e.target.value)}
+          />
+        </label>
+        <div className={styles.swatches}>
+          {PALETTE.map((color) => (
             <button
+              key={color}
               type="button"
-              className={styles.ghost}
+              aria-label={color}
               disabled={disabled}
-              onClick={() => setActiveManual(null)}
-            >
-              Авто по шкале
-            </button>
-          )}
+              style={{ background: color }}
+              onClick={() => setActiveManual(color)}
+            />
+          ))}
+        </div>
+        {active.manual && (
+          <button
+            type="button"
+            className={styles.ghost}
+            disabled={disabled}
+            onClick={() => setActiveManual(null)}
+          >
+            Авто по шкале
+          </button>
+        )}
 
-          {!medical && (
-            <>
-              <label className={styles.field}>
-                Контур
+        {!medical && (
+          <>
+            <label className={styles.field}>
+              Контур
+              <input
+                type="color"
+                value={payload.outline}
+                disabled={disabled}
+                onChange={(e) => patch({ outline: e.target.value })}
+              />
+            </label>
+            <div className={styles.row}>
+              <label className={styles.row}>
                 <input
-                  type="color"
-                  value={payload.outline}
+                  type="checkbox"
+                  checked={payload.districts}
                   disabled={disabled}
-                  onChange={(e) => patch({ outline: e.target.value })}
+                  onChange={(e) => patch({ districts: e.target.checked })}
                 />
+                Названия районов
               </label>
-              <div className={styles.row}>
-                <label className={styles.row}>
-                  <input
-                    type="checkbox"
-                    checked={payload.districts}
-                    disabled={disabled}
-                    onChange={(e) => patch({ districts: e.target.checked })}
-                  />
-                  Названия районов
-                </label>
-                <label className={styles.row}>
-                  <input
-                    type="checkbox"
-                    checked={payload.cities}
-                    disabled={disabled}
-                    onChange={(e) => patch({ cities: e.target.checked })}
-                  />
-                  Админцентры
-                </label>
-              </div>
-            </>
-          )}
-        </aside>
-      </div>
-      {(status || notice) && (
-        <p className={styles.status} role="status">
-          {notice ?? status}
-        </p>
-      )}
+              <label className={styles.row}>
+                <input
+                  type="checkbox"
+                  checked={payload.cities}
+                  disabled={disabled}
+                  onChange={(e) => patch({ cities: e.target.checked })}
+                />
+                Админцентры
+              </label>
+            </div>
+          </>
+        )}
+        {(status || notice) && (
+          <p className={styles.status} role="status">
+            {notice ?? status}
+          </p>
+        )}
+      </aside>
     </div>
   );
 }

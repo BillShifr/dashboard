@@ -16,6 +16,8 @@ for command_name in curl git python3; do
 done
 
 cd "$project_root"
+export COMPOSE_FILE=${COMPOSE_FILE:-"$project_root/compose.prod.yml"}
+[ -f "$COMPOSE_FILE" ] || fail "production compose file is missing: $COMPOSE_FILE"
 [ -d .git ] || fail "project directory is not a Git checkout"
 [ -z "$(git status --porcelain)" ] || fail "working tree is not clean"
 

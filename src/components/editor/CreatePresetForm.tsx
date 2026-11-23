@@ -6,15 +6,28 @@ import {
   defaultDispanserizationPayload,
   defaultTerritoryPayload,
 } from "@/domain/presets/defaults";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  productOf,
+  type StartReportKind,
+} from "@/components/shell/product-catalog";
 
-export function CreatePresetForm() {
+export function CreatePresetForm({
+  kind,
+  placeholder,
+}: {
+  kind: StartReportKind;
+  placeholder?: string;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(formData: FormData) {
     setError(null);
-    const kind = String(formData.get("kind"));
     const name = String(formData.get("name") ?? "").trim();
     if (!name) {
       setError("Укажите название");
@@ -31,7 +44,7 @@ export function CreatePresetForm() {
       body: JSON.stringify({ kind, name, payload }),
     });
     if (!response.ok) {
-      setError("Не удалось создать пресет");
+      setError("Не удалось создать отчёт");
       return;
     }
     const data = (await response.json()) as { preset: { id: string } };
@@ -42,56 +55,40 @@ export function CreatePresetForm() {
   }
 
   return (
-    <form
-      action={onSubmit}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1.4fr 1fr auto",
-        gap: 10,
-        alignItems: "end",
-        padding: 16,
-        background: "#fff",
-        border: "1px solid var(--line)",
-      }}
-    >
-      <label style={{ display: "grid", gap: 6 }}>
-        Название
-        <input
-          data-testid="preset-name"
-          name="name"
-          required
-          maxLength={120}
-          disabled={pending}
-        />
-      </label>
-      <label style={{ display: "grid", gap: 6 }}>
-        Тип
-        <select name="kind" defaultValue="territory" disabled={pending}>
-          <option value="territory">Территории</option>
-          <option value="dispanserization">Диспансеризация</option>
-        </select>
-      </label>
-      <button
-        data-testid="create-preset"
-        disabled={pending}
-        style={{
-          padding: "10px 14px",
-          border: 0,
-          background: "var(--accent)",
-          color: "#fff",
-          fontWeight: 600,
-        }}
-      >
-        {pending ? "Создание…" : "Создать"}
-      </button>
-      {error && (
-        <p
-          role="alert"
-          style={{ gridColumn: "1 / -1", color: "var(--danger)", margin: 0 }}
-        >
-          {error}
+    <Card className="py-5 shadow-none">
+      <CardContent>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Новый отчёт:{" "}
+          <span className="font-medium text-foreground">
+            {productOf(kind).reportLabel}
+          </span>
         </p>
-      )}
-    </form>
+        <form
+          action={onSubmit}
+          className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end"
+        >
+          <div className="grid gap-2">
+            <Label htmlFor="preset-name">Название отчёта</Label>
+            <Input
+              id="preset-name"
+              data-testid="preset-name"
+              name="name"
+              required
+              maxLength={120}
+              disabled={pending}
+              placeholder={placeholder ?? "Март 2026"}
+            />
+          </div>
+          <Button data-testid="create-preset" disabled={pending}>
+            {pending ? "Создание…" : "Создать отчёт"}
+          </Button>
+          {error ? (
+            <p role="alert" className="text-sm text-destructive md:col-span-2">
+              {error}
+            </p>
+          ) : null}
+        </form>
+      </CardContent>
+    </Card>
   );
 }

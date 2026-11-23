@@ -2,6 +2,37 @@ import { z } from "zod";
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+export const okrugTemplateIdSchema = z.enum([
+  "salary-doctors",
+  "salary-mid",
+  "salary-junior",
+  "spread-doctors",
+  "spread-mid",
+  "spread-junior",
+  "oms-residuals",
+]);
+
+export const okrugPayloadSchema = z.object({
+  version: z.literal(1),
+  templateId: okrugTemplateIdSchema,
+  title: z.string().trim().min(1).max(240),
+  outline: hexColor,
+  records: z.record(
+    z.string(),
+    z.object({
+      doctors: z.number().min(0).max(1_000_000).nullable(),
+      mid: z.number().min(0).max(1_000_000).nullable(),
+      junior: z.number().min(0).max(1_000_000).nullable(),
+      oms: z.number().min(0).max(1_000_000).nullable(),
+    }),
+  ),
+  extras: z.object({
+    period: z.string().max(200),
+    targetSalary: z.string().max(40),
+    factSalary: z.string().max(40),
+  }),
+});
+
 export const territoryPayloadSchema = z.object({
   version: z.literal(1),
   mode: z.enum(["geo", "hex", "med"]),
@@ -27,6 +58,8 @@ export const territoryPayloadSchema = z.object({
       manual: hexColor.nullable(),
     }),
   ),
+  /** Соты МО — утверждённый вид «Шестиугольники»; движок okrug, kind не меняется. */
+  okrug: okrugPayloadSchema.optional(),
 });
 
 export const dispanserizationPayloadSchema = z.object({
@@ -51,7 +84,11 @@ export const dispanserizationPayloadSchema = z.object({
   groupColors: z.record(z.string(), hexColor),
 });
 
-export const presetKindSchema = z.enum(["territory", "dispanserization"]);
+export const presetKindSchema = z.enum([
+  "territory",
+  "dispanserization",
+  "okrug",
+]);
 
 export const createPresetSchema = z.object({
   kind: presetKindSchema,
@@ -66,10 +103,11 @@ export const updatePresetSchema = z.object({
 });
 
 export function parsePresetPayload(
-  kind: "territory" | "dispanserization",
+  kind: "territory" | "dispanserization" | "okrug",
   payload: unknown,
 ) {
   if (kind === "territory") return territoryPayloadSchema.parse(payload);
+  if (kind === "okrug") return okrugPayloadSchema.parse(payload);
   return dispanserizationPayloadSchema.parse(payload);
 }
 
@@ -77,3 +115,4 @@ export type TerritoryPayload = z.infer<typeof territoryPayloadSchema>;
 export type DispanserizationPayload = z.infer<
   typeof dispanserizationPayloadSchema
 >;
+export type OkrugPayload = z.infer<typeof okrugPayloadSchema>;
