@@ -55,7 +55,6 @@ export async function POST(request: Request, { params }: Params) {
         const current = preset.payload as TerritoryPayload;
         const nextPayload: TerritoryPayload = {
           ...current,
-          mode: "hex",
           okrug: mergeOkrugImport(
             current.okrug ?? defaultOkrugPayload(),
             imported,

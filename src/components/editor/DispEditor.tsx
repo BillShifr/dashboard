@@ -412,7 +412,7 @@ export function DispEditor({
           {medical ? selectedInst?.short : selectedGroupMeta?.name}
         </h2>
 
-        {medical && selectedInst && (
+        {selectedInst && (
           <>
             <label className={styles.field}>
               План
@@ -465,24 +465,22 @@ export function DispEditor({
           </>
         )}
 
-        {medical && (
-          <label className={styles.field}>
-            Основа карты
-            <select
-              value={payload.medicalBase}
-              disabled={disabled}
-              onChange={(e) =>
-                patch({
-                  medicalBase: e.target
-                    .value as DispanserizationPayload["medicalBase"],
-                })
-              }
-            >
-              <option value="hex">Шестиугольники</option>
-              <option value="geo">Карта</option>
-            </select>
-          </label>
-        )}
+        <label className={styles.field}>
+          Основа карты
+          <select
+            value={payload.medicalBase}
+            disabled={disabled}
+            onChange={(e) =>
+              patch({
+                medicalBase: e.target
+                  .value as DispanserizationPayload["medicalBase"],
+              })
+            }
+          >
+            <option value="hex">Шестиугольники</option>
+            <option value="geo">Карта</option>
+          </select>
+        </label>
 
         <label className={styles.field}>
           Палитра
@@ -518,7 +516,7 @@ export function DispEditor({
             <input
               type="checkbox"
               checked={payload.labels}
-              disabled={disabled || medical}
+              disabled={disabled}
               onChange={(e) => patch({ labels: e.target.checked })}
             />
             Подписи
@@ -527,7 +525,7 @@ export function DispEditor({
             <input
               type="checkbox"
               checked={payload.cityLabels}
-              disabled={disabled || medical || payload.view !== "geo"}
+              disabled={disabled}
               onChange={(e) => patch({ cityLabels: e.target.checked })}
             />
             Города
