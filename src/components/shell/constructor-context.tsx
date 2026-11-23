@@ -31,6 +31,8 @@ type ConstructorState = {
   setTitle: (title: string) => void;
   meta?: string;
   setMeta: (meta: string | undefined) => void;
+  detail?: string;
+  setDetail: (detail: string | undefined) => void;
   sections: WorkspaceSection[];
   setSections: (sections: WorkspaceSection[]) => void;
   catalogSections: WorkspaceSection[];
@@ -45,6 +47,7 @@ export function ConstructorProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(true);
   const [title, setTitle] = useState("Отчёты");
   const [meta, setMeta] = useState<string | undefined>(undefined);
+  const [detail, setDetail] = useState<string | undefined>(undefined);
   const [sections, setSections] = useState<WorkspaceSection[]>([]);
   const [catalogSections, setCatalogSections] = useState<WorkspaceSection[]>(
     [],
@@ -61,6 +64,8 @@ export function ConstructorProvider({ children }: { children: ReactNode }) {
       setTitle,
       meta,
       setMeta,
+      detail,
+      setDetail,
       sections,
       setSections,
       catalogSections,
@@ -68,7 +73,7 @@ export function ConstructorProvider({ children }: { children: ReactNode }) {
       toolbar,
       setToolbar,
     }),
-    [open, title, meta, sections, catalogSections, toolbar, toggle],
+    [open, title, meta, detail, sections, catalogSections, toolbar, toggle],
   );
 
   return (

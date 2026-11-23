@@ -38,18 +38,10 @@ export function PresetsPageContent({
   return (
     <>
       <CreateReportSidebarSync kind={kind} onKindChange={setKind} />
-      <header className="grid gap-2 border-b border-border pb-6">
-        <p className="font-display text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
-          Форма отчёта
-        </p>
+      <header className="border-b border-border pb-6">
         <h2 className="font-display text-2xl tracking-tight">
           {product.reportLabel}
         </h2>
-        <p className="max-w-xl text-sm text-muted-foreground">
-          {kind === "dispanserization"
-            ? "Список и создание отчётов по диспансеризации. Режим карты — в редакторе: Карта, шестиугольники, учреждения."
-            : "Список и создание отчётов по инциденту №8. Режим карты — в редакторе: 9 районов, соты МО, 63 БУ."}
-        </p>
       </header>
 
       {canCreate ? (
@@ -73,7 +65,7 @@ export function PresetsPageContent({
           </p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Нет отчётов формы «{reportKindLabel(kind)}». Создайте новый ниже.
+            Нет отчётов формы «{reportKindLabel(kind)}».
           </p>
         ) : (
           filtered.map((row) => (

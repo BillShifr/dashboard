@@ -4,13 +4,20 @@ import { useEffect, useLayoutEffect, type ReactNode } from "react";
 import { useConstructor } from "@/components/shell/constructor-context";
 
 export function PresetsFrame({ children }: { children: ReactNode }) {
-  const { setTitle, setMeta, setSections, setCatalogSections, setToolbar } =
-    useConstructor();
+  const {
+    setTitle,
+    setMeta,
+    setDetail,
+    setSections,
+    setCatalogSections,
+    setToolbar,
+  } = useConstructor();
 
   useEffect(() => {
     setTitle("Отчёты");
-    setMeta("Выберите форму отчёта и откройте или создайте");
-  }, [setTitle, setMeta]);
+    setMeta(undefined);
+    setDetail(undefined);
+  }, [setTitle, setMeta, setDetail]);
 
   useLayoutEffect(() => {
     return () => {

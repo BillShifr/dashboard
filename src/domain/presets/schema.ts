@@ -58,7 +58,7 @@ export const territoryPayloadSchema = z.object({
       manual: hexColor.nullable(),
     }),
   ),
-  /** Соты МО — утверждённый вид «Шестиугольники»; движок okrug, kind не меняется. */
+  /** Соты МО — вид hex в сайдбаре; движок okrug, kind не меняется. */
   okrug: okrugPayloadSchema.optional(),
 });
 

@@ -42,13 +42,8 @@ export function AppSidebar() {
             ТФ
           </span>
           {open ? (
-            <span className="min-w-0 leading-tight">
-              <span className="block font-display text-[15px] tracking-tight">
-                Dashboard
-              </span>
-              <span className="block text-[10px] tracking-[0.18em] text-sidebar-foreground/55 uppercase">
-                Конструктор
-              </span>
+            <span className="min-w-0 font-display text-[15px] tracking-tight">
+              Dashboard
             </span>
           ) : null}
           <button
@@ -163,7 +158,7 @@ function SidebarSection({
   return (
     <div className="grid gap-1">
       {title ? (
-        <p className="px-2 font-display text-[10px] tracking-[0.18em] text-sidebar-foreground/45 uppercase">
+        <p className="px-2 text-xs font-medium text-sidebar-foreground/55">
           {title}
         </p>
       ) : null}

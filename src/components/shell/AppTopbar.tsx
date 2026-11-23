@@ -6,7 +6,7 @@ import { UserMenu, type HeaderUser } from "@/components/shell/UserMenu";
 import { Button } from "@/components/ui/button";
 
 export function AppTopbar({ user }: { user: HeaderUser }) {
-  const { open, setOpen, title, meta, toolbar } = useConstructor();
+  const { open, setOpen, title, meta, detail, toolbar } = useConstructor();
 
   return (
     <header className="flex min-h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-3 py-2 md:px-4">
@@ -26,6 +26,11 @@ export function AppTopbar({ user }: { user: HeaderUser }) {
         </h1>
         {meta ? (
           <p className="truncate text-xs text-muted-foreground">{meta}</p>
+        ) : null}
+        {detail ? (
+          <p className="truncate text-xs text-muted-foreground tabular-nums">
+            {detail}
+          </p>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">

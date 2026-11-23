@@ -20,12 +20,9 @@ export default async function LoginPage({
   return (
     <main className="grid min-h-svh lg:grid-cols-[1.1fr_0.9fr]">
       <section className="flex flex-col justify-end gap-6 bg-primary px-10 py-12 text-primary-foreground">
-        <p className="text-[11px] font-medium tracking-[0.18em] uppercase opacity-80">
-          ТФОМС Югры
-        </p>
         <div>
           <h1 className="font-display text-4xl font-semibold tracking-tight">
-            Dashboard
+            ТФОМС Югры
           </h1>
           <p className="mt-2 max-w-sm text-sm text-primary-foreground/80">
             Карты округа, территорий и диспансеризации для докладов

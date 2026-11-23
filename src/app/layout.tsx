@@ -18,7 +18,7 @@ const unbounded = Unbounded({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard · Югра",
+  title: "ТФОМС Югры",
   description: "Редактор карт и диспансеризации Югры",
 };
 

@@ -6,30 +6,47 @@ import { useConstructor } from "@/components/shell/constructor-context";
 export function EditorFrame({
   title,
   meta,
+  detail,
   children,
 }: {
   title: string;
   meta?: string;
+  detail?: string;
   children: ReactNode;
 }) {
-  const { setTitle, setMeta, setSections, setCatalogSections, setToolbar } =
-    useConstructor();
+  const {
+    setTitle,
+    setMeta,
+    setDetail,
+    setSections,
+    setCatalogSections,
+    setToolbar,
+  } = useConstructor();
 
   useEffect(() => {
     setTitle(title);
     setMeta(meta);
+    setDetail(detail);
     setCatalogSections([]);
-  }, [title, meta, setTitle, setMeta, setCatalogSections]);
+  }, [title, meta, detail, setTitle, setMeta, setDetail, setCatalogSections]);
 
   useLayoutEffect(() => {
     return () => {
       setTitle("Отчёты");
       setMeta(undefined);
+      setDetail(undefined);
       setSections([]);
       setCatalogSections([]);
       setToolbar(null);
     };
-  }, [setTitle, setMeta, setSections, setCatalogSections, setToolbar]);
+  }, [
+    setTitle,
+    setMeta,
+    setDetail,
+    setSections,
+    setCatalogSections,
+    setToolbar,
+  ]);
 
   return <div className="h-full min-h-0">{children}</div>;
 }
