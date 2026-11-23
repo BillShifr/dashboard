@@ -4,6 +4,7 @@ set -eu
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 project_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 . "$script_dir/lib/container-engine.sh"
+export COMPOSE_FILE=${COMPOSE_FILE:-"$project_root/compose.prod.yml"}
 
 expected_revision=${VCS_REF:?VCS_REF must be a full Git commit SHA}
 case "$expected_revision" in *[!0-9a-f]*|'') exit 1 ;; esac

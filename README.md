@@ -38,9 +38,12 @@ npx playwright install chromium   # один раз на машине разра
 
 ## Production
 
-Контур как у HR: GitHub Actions проверяет commit → оператор на portal запускает
+Контур как у kanban: GitHub Actions проверяет commit, на portal user timer
+`dashboard-autodeploy.timer` вызывает
 `CONTAINER_ENGINE=podman sh scripts/update-production.sh` из `$HOME/apps/dashboard`.
+Первая установка: `docs/OPERATIONS.md`.
 
 Nginx: `deploy/nginx/dashboard.tfoms.conf` → `127.0.0.1:3090`.
+Compose: `compose.prod.yml` (база без порта на хост).
 
 Репозиторий: https://github.com/BillShifr/dashboard (private).

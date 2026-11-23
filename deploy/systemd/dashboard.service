@@ -1,15 +1,19 @@
 [Unit]
-Description=Dashboard (Югра) Podman Compose
-After=network-online.target
+Description=Dashboard (Югра) rootless Podman Compose
 Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=%h/apps/dashboard
 Environment=CONTAINER_ENGINE=podman
-ExecStart=/usr/bin/podman compose up -d db app
-ExecStop=/usr/bin/podman compose stop app
+Environment=COMPOSE_FILE=%h/apps/dashboard/compose.prod.yml
+ExecStartPre=/bin/sh -c '/usr/bin/podman compose --env-file %h/apps/dashboard/.env -f %h/apps/dashboard/compose.prod.yml config >/dev/null'
+ExecStart=/usr/bin/podman compose --env-file %h/apps/dashboard/.env -f %h/apps/dashboard/compose.prod.yml up -d db app
+ExecStop=/usr/bin/podman compose --env-file %h/apps/dashboard/.env -f %h/apps/dashboard/compose.prod.yml stop app
+TimeoutStartSec=1800
+TimeoutStopSec=180
 
 [Install]
 WantedBy=default.target

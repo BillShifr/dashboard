@@ -3,7 +3,16 @@ import {
   mergeImportedRecords,
   parsePpcVolumesWorkbook,
 } from "@/domain/disp/import/excel";
-import type { DispanserizationPayload } from "@/domain/presets/schema";
+import {
+  mergeOkrugImport,
+  parseOkrugWorkbook,
+} from "@/domain/okrug/import/excel";
+import { defaultOkrugPayload } from "@/domain/presets/defaults";
+import type {
+  DispanserizationPayload,
+  OkrugPayload,
+  TerritoryPayload,
+} from "@/domain/presets/schema";
 import { getPreset, updatePreset } from "@/domain/presets/service";
 import { currentUser } from "@/lib/auth";
 import { jsonError } from "@/lib/http";
@@ -28,13 +37,55 @@ export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
   const preset = await getPreset(user, id);
   if (!preset) return jsonError("Not found", 404);
-  if (preset.kind !== "dispanserization")
-    return jsonError("Only for dispanserization presets", 400);
+  if (
+    preset.kind !== "dispanserization" &&
+    preset.kind !== "okrug" &&
+    preset.kind !== "territory"
+  )
+    return jsonError(
+      "Импорт Excel только для диспансеризации и Инцидента №8",
+      400,
+    );
 
   try {
-    const imported = await parsePpcVolumesWorkbook(
-      Buffer.from(await file.arrayBuffer()),
-    );
+    const buffer = Buffer.from(await file.arrayBuffer());
+    if (preset.kind === "okrug" || preset.kind === "territory") {
+      const imported = await parseOkrugWorkbook(buffer);
+      if (preset.kind === "territory") {
+        const current = preset.payload as TerritoryPayload;
+        const nextPayload: TerritoryPayload = {
+          ...current,
+          mode: "hex",
+          okrug: mergeOkrugImport(
+            current.okrug ?? defaultOkrugPayload(),
+            imported,
+          ),
+        };
+        const row = await updatePreset(user, id, {
+          expectedVersion: expectedVersion.data,
+          payload: nextPayload,
+        });
+        return Response.json({
+          preset: row,
+          imported: Object.keys(imported.values).length,
+          metric: imported.metric,
+        });
+      }
+      const nextPayload = mergeOkrugImport(
+        preset.payload as OkrugPayload,
+        imported,
+      );
+      const row = await updatePreset(user, id, {
+        expectedVersion: expectedVersion.data,
+        payload: nextPayload,
+      });
+      return Response.json({
+        preset: row,
+        imported: Object.keys(imported.values).length,
+        metric: imported.metric,
+      });
+    }
+    const imported = await parsePpcVolumesWorkbook(buffer);
     const nextPayload = mergeImportedRecords(
       preset.payload as DispanserizationPayload,
       imported,

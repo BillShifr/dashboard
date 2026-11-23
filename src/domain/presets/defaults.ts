@@ -1,6 +1,9 @@
 import { INSTITUTIONS } from "@/domain/disp/catalog";
+import { OKRUG_ORGS } from "@/domain/okrug/catalog";
+import { OKRUG_TEMPLATE_BY_ID } from "@/domain/okrug/templates";
 import type {
   DispanserizationPayload,
+  OkrugPayload,
   TerritoryPayload,
 } from "@/domain/presets/schema";
 import { newRecords } from "@/domain/territory/medical/scales.js";
@@ -21,6 +24,7 @@ export function defaultTerritoryPayload(): TerritoryPayload {
       manual: null,
     })),
     records: newRecords() as TerritoryPayload["records"],
+    okrug: defaultOkrugPayload(),
   };
 }
 
@@ -43,5 +47,24 @@ export function defaultDispanserizationPayload(): DispanserizationPayload {
       ]),
     ),
     groupColors: {},
+  };
+}
+
+export function defaultOkrugPayload(
+  templateId: OkrugPayload["templateId"] = "salary-doctors",
+): OkrugPayload {
+  const template = OKRUG_TEMPLATE_BY_ID[templateId];
+  return {
+    version: 1,
+    templateId,
+    title: template.defaultTitle,
+    outline: "#FFFFFF",
+    records: Object.fromEntries(
+      OKRUG_ORGS.map((org) => [
+        org.id,
+        { doctors: null, mid: null, junior: null, oms: null },
+      ]),
+    ),
+    extras: { period: "", targetSalary: "", factSalary: "" },
   };
 }

@@ -45,9 +45,11 @@ jobs:
       - run: npm run db:seed
       - run: npm run verify
       - name: Deployment script syntax
-        run: find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 sh -n
+        run: find scripts deploy -type f -name '*.sh' -print0 | xargs -0 -n1 sh -n
       - name: Compose configuration
-        run: docker compose config --quiet
+        run: |
+          docker compose config --quiet
+          docker compose -f compose.prod.yml config --quiet
         env:
           POSTGRES_PASSWORD: ci-only-database-password
           CONTAINER_DATABASE_URL: postgres://dashboard:ci-only-database-password@db:5432/dashboard

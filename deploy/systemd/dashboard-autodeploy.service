@@ -1,0 +1,12 @@
+[Unit]
+Description=Dashboard automatic deployment
+Wants=network-online.target
+After=network-online.target dashboard.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/apps/dashboard
+Environment=CONTAINER_ENGINE=podman
+Environment=COMPOSE_FILE=%h/apps/dashboard/compose.prod.yml
+ExecStart=%h/apps/dashboard/deploy/auto-deploy.sh
+TimeoutStartSec=7200

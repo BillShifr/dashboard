@@ -1,0 +1,74 @@
+name: dashboard
+services:
+  db:
+    image: postgres:18.1-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-dashboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes: [postgres-data:/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    networks: [dashboard]
+  migrate:
+    image: ${MIGRATOR_IMAGE_REPOSITORY:-dashboard-migrator}:${VCS_REF:?Set VCS_REF in .env}
+    build:
+      context: .
+      target: migrator
+      args: { VCS_REF: "${VCS_REF:?Set VCS_REF in .env}" }
+    command: ["npm", "run", "db:migrate"]
+    environment:
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:?CONTAINER_DATABASE_URL is required}
+      INITIAL_ADMIN_LOGIN: ${INITIAL_ADMIN_LOGIN:-}
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+    depends_on: { db: { condition: service_healthy } }
+    profiles: ["ops"]
+    networks: [dashboard]
+  db-tools:
+    image: postgres:18.1-alpine
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-dashboard}
+      PGUSER: ${POSTGRES_USER:-dashboard}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    depends_on: { db: { condition: service_healthy } }
+    profiles: ["ops"]
+    networks: [dashboard]
+  app:
+    image: ${APP_IMAGE_REPOSITORY:-dashboard}:${VCS_REF:?Set VCS_REF in .env}
+    build:
+      context: .
+      target: runtime
+      args: { VCS_REF: "${VCS_REF:?Set VCS_REF in .env}" }
+    environment:
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:?CONTAINER_DATABASE_URL is required}
+      APP_ORIGIN: ${APP_ORIGIN:-http://dashboard.tfoms}
+    ports: ["127.0.0.1:${APP_PORT:-3090}:3000"]
+    depends_on: { db: { condition: service_healthy } }
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    networks: [dashboard]
+networks: { dashboard: {} }
+volumes:
+  postgres-data:
+    name: dashboard_postgres-data
