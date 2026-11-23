@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { ExportMenu } from "@/components/editor/ExportMenu";
+import { ImportFileButton } from "@/components/editor/ImportFileButton";
 import { MapCanvas } from "@/components/editor/MapCanvas";
 import { ZoomControl } from "@/components/editor/ZoomControl";
 import styles from "@/components/editor/editor.module.css";
@@ -21,6 +22,12 @@ import {
   parseValue,
   scales,
 } from "@/domain/territory/medical/scales.js";
+import {
+  buildOkrugPdfBlob,
+  buildOkrugSvg,
+  okrugExportFilename,
+  okrugPngDimensions,
+} from "@/domain/okrug/scene/export";
 import {
   buildTerritoryPdfBlob,
   buildTerritorySvg,
@@ -76,6 +83,7 @@ export function TerritoryEditor({
   const [zoom, setZoom] = useState(1);
   const [query, setQuery] = useState("");
   const [exportBusy, setExportBusy] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const { setSections, setToolbar } = useConstructor();
 
@@ -141,14 +149,26 @@ export function TerritoryEditor({
     patch({ items });
   }
 
+  const honeycomb = payload.okrug ?? defaultOkrugPayload();
+  const honeycombView = payload.mode === "hex";
+
   async function exportPng() {
     setExportBusy(true);
     setNotice(null);
     try {
-      const dims = territoryPngDimensions(payload);
-      const markup = buildTerritorySvg(payload, false);
+      const dims = honeycombView
+        ? okrugPngDimensions()
+        : territoryPngDimensions(payload);
+      const markup = honeycombView
+        ? buildOkrugSvg(honeycomb, false)
+        : buildTerritorySvg(payload, false);
       const blob = await svgToPngBlob(markup, dims.width, dims.height);
-      downloadBlob(blob, territoryExportFilename(payload, "png"));
+      downloadBlob(
+        blob,
+        honeycombView
+          ? okrugExportFilename(honeycomb, "png")
+          : territoryExportFilename(payload, "png"),
+      );
       setNotice("PNG готов");
     } catch {
       setNotice("Не удалось создать PNG");
@@ -162,8 +182,12 @@ export function TerritoryEditor({
     setNotice(null);
     try {
       downloadBlob(
-        buildTerritoryPdfBlob(payload),
-        territoryExportFilename(payload, "pdf"),
+        honeycombView
+          ? buildOkrugPdfBlob(honeycomb)
+          : buildTerritoryPdfBlob(payload),
+        honeycombView
+          ? okrugExportFilename(honeycomb, "pdf")
+          : territoryExportFilename(payload, "pdf"),
       );
       setNotice("PDF готов");
     } catch {
@@ -173,15 +197,9 @@ export function TerritoryEditor({
     }
   }
 
-  const honeycomb = useMemo(
-    () => payload.okrug ?? defaultOkrugPayload(),
-    [payload.okrug],
-  );
-  const honeycombView = payload.mode === "hex";
-
   const patchOkrug = useCallback(
     (next: OkrugPayload) => {
-      onChange({ ...payload, mode: "hex", okrug: next });
+      onChange({ ...payload, okrug: next });
     },
     [onChange, payload],
   );
@@ -192,7 +210,6 @@ export function TerritoryEditor({
         version: preset.version,
         payload: {
           ...payload,
-          mode: "hex",
           okrug: preset.payload,
         },
       });
@@ -238,18 +255,53 @@ export function TerritoryEditor({
         }),
       },
     ];
-    if (honeycombView) {
-      display.push(...okrugSlideSections(honeycomb, patchOkrug, disabled));
-    }
+    display.push(...okrugSlideSections(honeycomb, patchOkrug, disabled));
     setSections(display);
     // setDisplayView/patchOkrug recreate each render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload.mode, payload.okrug, payload.medicalBase, disabled, setSections]);
 
+  async function importExcel(file: File) {
+    setImportBusy(true);
+    setNotice(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("expectedVersion", String(version));
+      const response = await fetch(`/api/presets/${presetId}/import-excel`, {
+        method: "POST",
+        body: form,
+      });
+      if (response.status === 409) {
+        setNotice("Конфликт версии — обновите страницу");
+        return;
+      }
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setNotice(data?.error ?? "Импорт не удался");
+        return;
+      }
+      const data = (await response.json()) as {
+        preset: { version: number; payload: TerritoryPayload };
+        imported: number;
+      };
+      onServerPreset(data.preset);
+      setNotice(`Импортировано МО: ${data.imported}`);
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
   useLayoutEffect(() => {
-    if (honeycombView) return;
     setToolbar(
       <>
+        <ImportFileButton
+          accept=".xlsx,.xls"
+          disabled={disabled || importBusy}
+          onFile={(file) => void importExcel(file)}
+        />
         <ExportMenu busy={exportBusy} onPng={exportPng} onPdf={exportPdf} />
         {!disabled && (
           <Button
@@ -266,7 +318,15 @@ export function TerritoryEditor({
     );
     // export handlers close over payload from this render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled, exportBusy, pending, setToolbar, onSave, honeycombView]);
+  }, [
+    disabled,
+    importBusy,
+    exportBusy,
+    pending,
+    setToolbar,
+    onSave,
+    honeycombView,
+  ]);
 
   if (honeycombView) {
     return (
@@ -275,9 +335,61 @@ export function TerritoryEditor({
         payload={honeycomb}
         disabled={disabled}
         pending={pending}
-        status={status}
+        status={notice ?? status}
         version={version}
         manageSections={false}
+        ownToolbar={false}
+        inspectorExtra={
+          <>
+            <label className={styles.field}>
+              Шкала
+              <select
+                value={payload.scale}
+                disabled={disabled}
+                onChange={(e) =>
+                  patch({ scale: e.target.value as TerritoryPayload["scale"] })
+                }
+              >
+                {Object.entries(scales as Record<string, { name: string }>).map(
+                  ([id, scale]) => (
+                    <option key={id} value={id}>
+                      {scale.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label className={styles.field}>
+              Контур
+              <input
+                type="color"
+                value={payload.outline}
+                disabled={disabled}
+                onChange={(e) => patch({ outline: e.target.value })}
+              />
+            </label>
+            <div className={styles.row}>
+              <label className={styles.row}>
+                <input
+                  type="checkbox"
+                  checked={payload.districts}
+                  disabled={disabled}
+                  onChange={(e) => patch({ districts: e.target.checked })}
+                />
+                Названия районов
+              </label>
+              <label className={styles.row}>
+                <input
+                  type="checkbox"
+                  checked={payload.cities}
+                  disabled={disabled}
+                  onChange={(e) => patch({ cities: e.target.checked })}
+                />
+                Админцентры
+              </label>
+            </div>
+          </>
+        }
         onChange={patchOkrug}
         onServerPreset={handleOkrugServerPreset}
         onSave={onSave}
@@ -492,39 +604,35 @@ export function TerritoryEditor({
           </button>
         )}
 
-        {!medical && (
-          <>
-            <label className={styles.field}>
-              Контур
-              <input
-                type="color"
-                value={payload.outline}
-                disabled={disabled}
-                onChange={(e) => patch({ outline: e.target.value })}
-              />
-            </label>
-            <div className={styles.row}>
-              <label className={styles.row}>
-                <input
-                  type="checkbox"
-                  checked={payload.districts}
-                  disabled={disabled}
-                  onChange={(e) => patch({ districts: e.target.checked })}
-                />
-                Названия районов
-              </label>
-              <label className={styles.row}>
-                <input
-                  type="checkbox"
-                  checked={payload.cities}
-                  disabled={disabled}
-                  onChange={(e) => patch({ cities: e.target.checked })}
-                />
-                Админцентры
-              </label>
-            </div>
-          </>
-        )}
+        <label className={styles.field}>
+          Контур
+          <input
+            type="color"
+            value={payload.outline}
+            disabled={disabled}
+            onChange={(e) => patch({ outline: e.target.value })}
+          />
+        </label>
+        <div className={styles.row}>
+          <label className={styles.row}>
+            <input
+              type="checkbox"
+              checked={payload.districts}
+              disabled={disabled}
+              onChange={(e) => patch({ districts: e.target.checked })}
+            />
+            Названия районов
+          </label>
+          <label className={styles.row}>
+            <input
+              type="checkbox"
+              checked={payload.cities}
+              disabled={disabled}
+              onChange={(e) => patch({ cities: e.target.checked })}
+            />
+            Админцентры
+          </label>
+        </div>
         {(status || notice) && (
           <p className={styles.status} role="status">
             {notice ?? status}

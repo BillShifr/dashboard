@@ -39,6 +39,9 @@ type Props = {
   version: number;
   /** Если true — родитель сам рисует сайдбар (Инцидент №8: 9 районов / соты / 63 БУ). */
   manageSections?: boolean;
+  /** Инцидент №8: кнопки экспорта держит родитель, они не зависят от вида карты. */
+  ownToolbar?: boolean;
+  inspectorExtra?: React.ReactNode;
 };
 
 function formatValue(value: number | null, unit: "%" | "мес."): string {
@@ -60,6 +63,8 @@ export function OkrugEditor({
   status,
   version,
   manageSections = true,
+  ownToolbar = true,
+  inspectorExtra,
 }: Props) {
   const [selected, setSelected] = useState(OKRUG_ORGS[0]!.id);
   const [zoom, setZoom] = useState(1);
@@ -220,6 +225,7 @@ export function OkrugEditor({
   });
 
   useLayoutEffect(() => {
+    if (!ownToolbar) return;
     setToolbar(
       <>
         <ImportFileButton
@@ -242,7 +248,7 @@ export function OkrugEditor({
         </Button>
       </>,
     );
-  }, [disabled, importBusy, exportBusy, pending, setToolbar]);
+  }, [disabled, importBusy, exportBusy, pending, setToolbar, ownToolbar]);
 
   return (
     <div className={styles.shell}>
@@ -367,6 +373,7 @@ export function OkrugEditor({
             </button>
           ))}
         </div>
+        {inspectorExtra}
         {(status || notice) && (
           <p className={styles.status} role="status">
             {notice ?? status}
