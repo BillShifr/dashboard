@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { auditEvents, presets } from "@/db/schema";
+import { auditEvents, presets, users } from "@/db/schema";
 import {
   parsePresetPayload,
   type createPresetSchema,
@@ -117,6 +117,95 @@ export async function updatePreset(
     },
   });
   return row!;
+}
+
+function uniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  if ("code" in error && (error as { code: string }).code === "23505")
+    return true;
+  if ("cause" in error)
+    return uniqueViolation((error as { cause: unknown }).cause);
+  return false;
+}
+
+export async function listPresetDirectory(actor: Actor) {
+  if (actor.role !== "admin") throw new Error("FORBIDDEN");
+  return db
+    .select({
+      id: presets.id,
+      kind: presets.kind,
+      name: presets.name,
+      version: presets.version,
+      ownerUserId: presets.ownerUserId,
+      ownerName: users.fullName,
+      ownerLogin: users.login,
+      updatedAt: presets.updatedAt,
+    })
+    .from(presets)
+    .innerJoin(users, eq(users.id, presets.ownerUserId))
+    .where(
+      and(
+        eq(presets.organizationId, actor.organizationId),
+        eq(presets.isActive, true),
+      ),
+    )
+    .orderBy(desc(presets.updatedAt));
+}
+
+export async function revisePreset(
+  actor: Actor,
+  id: string,
+  input: { name: string; ownerUserId: string },
+) {
+  if (actor.role !== "admin") throw new Error("FORBIDDEN");
+  const existing = await getPreset(actor, id);
+  if (!existing) throw new Error("NOT_FOUND");
+
+  const [owner] = await db
+    .select({ id: users.id, isActive: users.isActive })
+    .from(users)
+    .where(
+      and(
+        eq(users.id, input.ownerUserId),
+        eq(users.organizationId, actor.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!owner?.isActive) throw new Error("OWNER_UNAVAILABLE");
+
+  try {
+    const [row] = await db
+      .update(presets)
+      .set({
+        name: input.name,
+        ownerUserId: input.ownerUserId,
+        version: existing.version + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(presets.id, id))
+      .returning({
+        id: presets.id,
+        name: presets.name,
+        version: presets.version,
+        ownerUserId: presets.ownerUserId,
+      });
+    await db.insert(auditEvents).values({
+      organizationId: actor.organizationId,
+      actorId: actor.id,
+      action: "preset.revised",
+      objectType: "preset",
+      objectId: id,
+      metadata: {
+        name: input.name,
+        ownerUserId: input.ownerUserId,
+        fromVersion: existing.version,
+      },
+    });
+    return row!;
+  } catch (error) {
+    if (uniqueViolation(error)) throw new Error("DUPLICATE");
+    throw error;
+  }
 }
 
 export async function deletePreset(actor: Actor, id: string) {

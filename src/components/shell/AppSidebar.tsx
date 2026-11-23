@@ -6,18 +6,20 @@ import {
   FolderKanbanIcon,
   LayoutTemplateIcon,
   PanelLeftIcon,
+  ShieldIcon,
 } from "lucide-react";
 import { useConstructor } from "@/components/shell/constructor-context";
 import { PRODUCT_CATALOG } from "@/components/shell/product-catalog";
 import { cn } from "@/lib/utils";
 
-export function AppSidebar() {
+export function AppSidebar({ role }: { role: "viewer" | "editor" | "admin" }) {
   const pathname = usePathname();
   const { open, setOpen, catalogSections, sections } = useConstructor();
   const productIcon = (id: string) =>
     PRODUCT_CATALOG.find((p) => p.kind === id)?.icon ?? LayoutTemplateIcon;
   const presetsActive =
     pathname === "/presets" || pathname.startsWith("/presets");
+  const adminActive = pathname === "/admin" || pathname.startsWith("/admin");
 
   return (
     <>
@@ -66,6 +68,16 @@ export function AppSidebar() {
             >
               Отчёты
             </SidebarLink>
+            {role === "admin" ? (
+              <SidebarLink
+                href="/admin"
+                active={adminActive}
+                open={open}
+                icon={<ShieldIcon className="size-4" />}
+              >
+                Администрирование
+              </SidebarLink>
+            ) : null}
           </SidebarSection>
 
           {catalogSections.map((section) => (
