@@ -76,3 +76,9 @@ export async function requireEditor() {
   if (user.role === "viewer") redirect("/presets");
   return user;
 }
+
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "admin") redirect("/presets");
+  return user;
+}

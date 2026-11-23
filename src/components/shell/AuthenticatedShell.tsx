@@ -15,7 +15,7 @@ export function AuthenticatedShell({
   return (
     <ConstructorProvider>
       <div className="flex h-svh overflow-hidden bg-background">
-        <AppSidebar />
+        <AppSidebar role={user.role} />
         <div className="flex min-w-0 flex-1 flex-col">
           <AppTopbar user={user} />
           <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
