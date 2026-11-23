@@ -256,7 +256,6 @@ export function TerritoryEditor({
             type="button"
             size="sm"
             data-testid="save-preset"
-            title="Записать значения и настройки карты в базу"
             disabled={pending}
             onClick={onSave}
           >

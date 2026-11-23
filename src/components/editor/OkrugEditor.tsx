@@ -197,8 +197,7 @@ export function OkrugEditor({
         items: [
           {
             id: "hex",
-            label: "Шестиугольники",
-            hint: "Соты медорганизаций",
+            label: "Соты МО",
             active: true,
             onSelect: () => {},
           },
@@ -236,7 +235,6 @@ export function OkrugEditor({
           type="button"
           size="sm"
           data-testid="save-preset"
-          title="Записать заголовки, значения МО и настройки слайда в базу"
           disabled={disabled || pending}
           onClick={() => onSaveRef.current()}
         >
@@ -274,8 +272,7 @@ export function OkrugEditor({
       <aside className={styles.side}>
         <p className={styles.inspectorTitle}>Инспектор</p>
         <p className={styles.muted}>
-          Слайд {template.slide} · {template.shortName}. Значения из Excel
-          «приложение к 1,4 / 2,5 / 3,6 / 7».
+          Значения из Excel «приложение к 1,4 / 2,5 / 3,6 / 7».
         </p>
         {template.showKpi && (
           <div className={styles.kpis}>

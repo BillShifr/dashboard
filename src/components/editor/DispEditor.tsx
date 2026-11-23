@@ -275,7 +275,6 @@ export function DispEditor({
             type="button"
             size="sm"
             data-testid="save-preset"
-            title="Записать план/факт и настройки в базу"
             disabled={pending}
             onClick={onSave}
           >

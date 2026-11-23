@@ -10,10 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  productOf,
-  type StartReportKind,
-} from "@/components/shell/product-catalog";
+import type { StartReportKind } from "@/components/shell/product-catalog";
 
 export function CreatePresetForm({
   kind,
@@ -57,12 +54,6 @@ export function CreatePresetForm({
   return (
     <Card className="py-5 shadow-none">
       <CardContent>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Новый отчёт:{" "}
-          <span className="font-medium text-foreground">
-            {productOf(kind).reportLabel}
-          </span>
-        </p>
         <form
           action={onSubmit}
           className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end"

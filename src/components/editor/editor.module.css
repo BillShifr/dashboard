@@ -114,10 +114,8 @@
 
 .inspectorTitle {
   margin: 0;
-  font-family: var(--font-display);
   font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--muted-foreground);
 }
 

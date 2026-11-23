@@ -38,17 +38,12 @@ export function AppSidebar() {
         )}
       >
         <div className="flex h-14 items-center gap-2.5 px-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary font-display text-[11px] font-semibold tracking-wide text-primary-foreground">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-[11px] font-semibold text-primary-foreground">
             ТФ
           </span>
           {open ? (
-            <span className="min-w-0 leading-tight">
-              <span className="block font-display text-[15px] tracking-tight">
-                Dashboard
-              </span>
-              <span className="block text-[10px] tracking-[0.18em] text-sidebar-foreground/55 uppercase">
-                Конструктор
-              </span>
+            <span className="min-w-0 text-[15px] font-semibold tracking-tight">
+              Dashboard
             </span>
           ) : null}
           <button
@@ -127,7 +122,7 @@ export function AppSidebar() {
                   )}
                 >
                   {item.index ? (
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-foreground/10 font-display text-[11px] font-medium">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-foreground/10 text-[11px] font-medium tabular-nums">
                       {item.index}
                     </span>
                   ) : (
@@ -163,7 +158,7 @@ function SidebarSection({
   return (
     <div className="grid gap-1">
       {title ? (
-        <p className="px-2 font-display text-[10px] tracking-[0.18em] text-sidebar-foreground/45 uppercase">
+        <p className="px-2 text-xs font-medium text-sidebar-foreground/55">
           {title}
         </p>
       ) : null}

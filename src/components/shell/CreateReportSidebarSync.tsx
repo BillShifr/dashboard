@@ -8,11 +8,6 @@ import {
   type StartReportKind,
 } from "@/components/shell/product-catalog";
 
-const FORM_HINT: Record<StartReportKind, string> = {
-  dispanserization: "План и факт по диспансеризации",
-  territory: "Показатели по округу (инцидент №8)",
-};
-
 /**
  * Стартовый экран: только выбор формы отчёта. Вид карты — в редакторе.
  */
@@ -34,7 +29,6 @@ export function CreateReportSidebarSync({
           return {
             id: k,
             label: product.reportLabel,
-            hint: FORM_HINT[k],
             active: kind === k,
             onSelect: () => onKindChange(k),
           };

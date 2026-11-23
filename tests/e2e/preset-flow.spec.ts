@@ -35,7 +35,7 @@ test("incident 8: three map modes, save, export", async ({ page }) => {
   await page.getByTestId("create-preset").click();
   await expect(page).toHaveURL(/\/editor\//);
 
-  for (const label of ["9 районов", "Шестиугольники", "63 БУ"]) {
+  for (const label of ["9 районов", "Соты МО", "63 БУ"]) {
     await page.getByRole("button", { name: new RegExp(label) }).click();
     await expect(page.locator("svg").first()).toBeVisible();
     await expect(page.getByText("Runtime Error")).toHaveCount(0);
@@ -61,7 +61,7 @@ test("dispanserization: three map modes and save", async ({ page }) => {
   await page.getByTestId("create-preset").click();
   await expect(page).toHaveURL(/\/editor\//);
 
-  for (const label of ["Карта", "Шестиугольники", "Учреждения"]) {
+  for (const label of ["Карта", "Соты территорий", "Учреждения"]) {
     await page.getByRole("button", { name: new RegExp(label) }).click();
     await expect(page.locator("svg").first()).toBeVisible();
     await expect(page.getByText("Runtime Error")).toHaveCount(0);

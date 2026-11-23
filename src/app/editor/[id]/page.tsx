@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/auth";
 import { getPreset } from "@/domain/presets/service";
 import { EditorShell } from "@/components/editor/EditorShell";
 import { EditorFrame } from "@/components/shell/EditorFrame";
-
 import { reportKindLabel } from "@/components/shell/product-catalog";
 
 export default async function EditorPage({
@@ -19,7 +18,8 @@ export default async function EditorPage({
   return (
     <EditorFrame
       title={preset.name}
-      meta={`${reportKindLabel(preset.kind)} · v${preset.version}`}
+      meta={reportKindLabel(preset.kind)}
+      detail={`v${preset.version}`}
     >
       <EditorShell
         presetId={preset.id}
