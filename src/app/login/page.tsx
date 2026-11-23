@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { unbounded } from "@/app/display-font";
 import { currentUser } from "@/lib/auth";
 
 export default async function LoginPage({
@@ -18,7 +19,9 @@ export default async function LoginPage({
   if (await currentUser()) redirect("/presets");
   const { error } = await searchParams;
   return (
-    <main className="grid min-h-svh lg:grid-cols-[1.1fr_0.9fr]">
+    <main
+      className={`${unbounded.variable} grid min-h-svh lg:grid-cols-[1.1fr_0.9fr]`}
+    >
       <section className="flex flex-col justify-end gap-6 bg-primary px-10 py-12 text-primary-foreground">
         <div>
           <h1 className="font-display text-4xl font-semibold tracking-tight">
@@ -32,9 +35,7 @@ export default async function LoginPage({
       <section className="grid place-items-center p-8">
         <Card className="w-full max-w-sm py-6 shadow-sm">
           <CardHeader className="px-6">
-            <h1 className="font-display text-base leading-snug font-medium">
-              Вход
-            </h1>
+            <h1 className="text-base leading-snug font-medium">Вход</h1>
             <CardDescription>Служебный доступ к редактору карт</CardDescription>
           </CardHeader>
           <CardContent>

@@ -1,5 +1,3 @@
-import { facilities } from "@/domain/territory/catalog/facilities.js";
-
 /** Режимы карты в payload territory (`mode`) / disp (`view`). */
 export type MapDisplayViewId = "geo" | "hex" | "med";
 
@@ -9,7 +7,8 @@ export type MapDisplayViewDef = {
   label: string;
 };
 
-const TERRITORY_BU = facilities.length;
+/** Число БУ в каталоге территорий. Держать равным `facilities.length`. */
+const TERRITORY_BU = 63;
 
 /** Инцидент №8 — три утверждённых макета. */
 export const INCIDENT_8_DISPLAY_VIEWS: readonly MapDisplayViewDef[] = [

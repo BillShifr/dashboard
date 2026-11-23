@@ -39,7 +39,7 @@ export function PresetsPageContent({
     <>
       <CreateReportSidebarSync kind={kind} onKindChange={setKind} />
       <header className="border-b border-border pb-6">
-        <h2 className="font-display text-2xl tracking-tight">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">
           {product.reportLabel}
         </h2>
       </header>

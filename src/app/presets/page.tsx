@@ -1,3 +1,4 @@
+import { unbounded } from "@/app/display-font";
 import { requireUser } from "@/lib/auth";
 import { listPresets } from "@/domain/presets/service";
 import { PresetsFrame } from "@/components/shell/PresetsFrame";
@@ -8,7 +9,7 @@ export default async function PresetsPage() {
   const rows = await listPresets(user);
 
   return (
-    <PresetsFrame>
+    <PresetsFrame className={unbounded.variable}>
       <PresetsPageContent rows={rows} canCreate={user.role !== "viewer"} />
     </PresetsFrame>
   );

@@ -21,7 +21,7 @@ export function AppTopbar({ user }: { user: HeaderUser }) {
         <MenuIcon />
       </Button>
       <div className="min-w-0 flex-1">
-        <h1 className="truncate font-display text-base tracking-tight md:text-lg">
+        <h1 className="truncate text-base font-semibold tracking-tight md:text-lg">
           {title}
         </h1>
         {meta ? (

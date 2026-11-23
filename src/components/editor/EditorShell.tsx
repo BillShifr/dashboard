@@ -1,14 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { DispEditor } from "@/components/editor/DispEditor";
-import { OkrugEditor } from "@/components/editor/OkrugEditor";
-import { TerritoryEditor } from "@/components/editor/TerritoryEditor";
 import type {
   DispanserizationPayload,
   OkrugPayload,
   TerritoryPayload,
 } from "@/domain/presets/schema";
+
+const DispEditor = dynamic(() =>
+  import("@/components/editor/DispEditor").then((mod) => mod.DispEditor),
+);
+const OkrugEditor = dynamic(() =>
+  import("@/components/editor/OkrugEditor").then((mod) => mod.OkrugEditor),
+);
+const TerritoryEditor = dynamic(() =>
+  import("@/components/editor/TerritoryEditor").then(
+    (mod) => mod.TerritoryEditor,
+  ),
+);
 
 type Kind = "territory" | "dispanserization" | "okrug";
 

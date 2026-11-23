@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { defaultTerritoryPayload } from "@/domain/presets/defaults";
+import { facilities } from "@/domain/territory/catalog/facilities.js";
 import { NAMES } from "@/domain/territory/catalog/meta";
+import { INCIDENT_8_DISPLAY_VIEWS } from "@/components/shell/report-display-views";
 import { scene } from "@/domain/territory/scene/scene";
 import {
   territoryExportFilename,
@@ -53,5 +55,10 @@ describe("territory scene", () => {
     const dims = territoryPngDimensions(defaultTerritoryPayload());
     expect(dims.width).toBe(2160);
     expect(dims.height).toBe(dims.sceneHeight * 4);
+  });
+
+  it("labels the medical view with the facility count", () => {
+    const medical = INCIDENT_8_DISPLAY_VIEWS.find((view) => view.id === "med");
+    expect(medical?.label).toBe(`${facilities.length} БУ`);
   });
 });
