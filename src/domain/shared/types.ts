@@ -10,4 +10,5 @@ export type Shape = {
   facility?: string;
   label?: string;
   bbox?: [number, number, number, number];
+  image?: { href: string; x: number; y: number; w: number; h: number };
 };

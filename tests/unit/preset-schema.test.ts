@@ -20,6 +20,15 @@ describe("preset payload schemas", () => {
     );
   });
 
+  it("accepts an older okrug extras object without slide chrome", () => {
+    const legacy = defaultTerritoryPayload();
+    legacy.okrug = {
+      ...legacy.okrug!,
+      extras: { period: "", targetSalary: "", factSalary: "" },
+    };
+    expect(() => parsePresetPayload("territory", legacy)).not.toThrow();
+  });
+
   it("accepts legacy territory payload without okrug", () => {
     const legacy = { ...defaultTerritoryPayload() };
     delete legacy.okrug;

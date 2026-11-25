@@ -9,7 +9,9 @@ export function buildOkrugSvg(
   interactive = false,
   selectedId: string | null = null,
 ): string {
-  const { shapes, width, height } = okrugScene(payload, selectedId);
+  const { shapes, width, height } = okrugScene(payload, selectedId, {
+    interactive,
+  });
   return shapesToSvg(shapes, height, {
     interactive,
     selectedFacility: selectedId,

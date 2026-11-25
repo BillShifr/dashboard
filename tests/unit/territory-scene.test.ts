@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { defaultTerritoryPayload } from "@/domain/presets/defaults";
-import { facilities } from "@/domain/territory/catalog/facilities.js";
 import { NAMES } from "@/domain/territory/catalog/meta";
 import { INCIDENT_8_DISPLAY_VIEWS } from "@/components/shell/report-display-views";
 import { scene } from "@/domain/territory/scene/scene";
@@ -20,6 +19,14 @@ describe("territory scene", () => {
         shapes.every((s) => typeof s.d === "string" && s.d.length > 0),
       ).toBe(true);
     }
+  });
+
+  it("draws every medical organization on the district map", () => {
+    const { shapes } = scene(defaultTerritoryPayload());
+    const ids = new Set(
+      shapes.map((shape) => shape.facility).filter((id) => id != null),
+    );
+    expect(ids.size).toBe(71);
   });
 
   it("covers 9 regions", () => {
@@ -57,8 +64,18 @@ describe("territory scene", () => {
     expect(dims.height).toBe(dims.sceneHeight * 4);
   });
 
-  it("labels the medical view with the facility count", () => {
-    const medical = INCIDENT_8_DISPLAY_VIEWS.find((view) => view.id === "med");
-    expect(medical?.label).toBe(`${facilities.length} БУ`);
+  it("names incident views without the old object counts", () => {
+    expect(INCIDENT_8_DISPLAY_VIEWS.map((view) => view.label)).toEqual([
+      "Карта",
+      "Соты",
+    ]);
+  });
+
+  it("draws the same organizations on the marker map", () => {
+    const { shapes } = scene({ ...defaultTerritoryPayload(), mode: "med" });
+    const ids = new Set(
+      shapes.map((shape) => shape.facility).filter((id) => id != null),
+    );
+    expect(ids.size).toBe(71);
   });
 });

@@ -4,6 +4,12 @@ import { legendCounts, templateOf } from "@/domain/okrug/bands";
 import { okrugScene } from "@/domain/okrug/scene/scene";
 import { OKRUG_TEMPLATES } from "@/domain/okrug/templates";
 import { defaultOkrugPayload } from "@/domain/presets/defaults";
+import {
+  DEFAULT_NUMERATOR,
+  DEFAULT_SUMMARY,
+  SUMMARY_BOX,
+  summaryPlacements,
+} from "@/domain/okrug/slide-chrome";
 import { EMU_PER_PT, polygonPath } from "@/domain/shared/geometry";
 
 describe("okrug scene", () => {
@@ -17,6 +23,29 @@ describe("okrug scene", () => {
       );
       expect(orgShape, template.id).toBeDefined();
     }
+  });
+
+  it("merges the summary title and the date headers", () => {
+    const places = summaryPlacements(DEFAULT_SUMMARY);
+    const title = places.find((place) => place.cell.text.startsWith("Топ МО"));
+    expect(title?.h).toBeCloseTo(SUMMARY_BOX.h / 2);
+    expect(places.some((place) => place.row === 4 && place.col === 0)).toBe(
+      false,
+    );
+    const date = places.find((place) => place.row === 0 && place.col === 1);
+    expect(date?.w).toBe(46 + 56);
+    expect(places.some((place) => place.row === 0 && place.col === 2)).toBe(
+      false,
+    );
+    const name = places.find((place) => place.row === 3 && place.col === 2);
+    expect(name?.w).toBe(56 + 56 + 56);
+  });
+
+  it("prints the formula numerator on the exported slide", () => {
+    const { shapes } = okrugScene(defaultOkrugPayload());
+    expect(shapes.some((shape) => shape.label === DEFAULT_NUMERATOR)).toBe(
+      true,
+    );
   });
 
   it("places legend captions to the right of swatches", () => {

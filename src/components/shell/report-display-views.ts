@@ -7,14 +7,10 @@ export type MapDisplayViewDef = {
   label: string;
 };
 
-/** Число БУ в каталоге территорий. Держать равным `facilities.length`. */
-const TERRITORY_BU = 63;
-
-/** Инцидент №8 — три утверждённых макета. */
+/** Инцидент №8 — три вида одной и той же карты МО. */
 export const INCIDENT_8_DISPLAY_VIEWS: readonly MapDisplayViewDef[] = [
-  { id: "geo", label: "9 районов" },
-  { id: "hex", label: "Соты МО" },
-  { id: "med", label: `${TERRITORY_BU} БУ` },
+  { id: "geo", label: "Карта" },
+  { id: "hex", label: "Соты" },
 ] as const;
 
 /** Диспансеризация — те же три визуала, своя логика план/факт. */

@@ -51,6 +51,16 @@ export function fillFor(payload: OkrugPayload, id: string): string {
   return bandFor(template, value)?.color ?? OKRUG_COLORS.empty;
 }
 
+/** Ручной цвет и граница поверх правила Excel. Пустое поле значит «как в диапазоне». */
+export function paintOf(payload: OkrugPayload, id: string) {
+  const custom = payload.extras.appearance?.[id];
+  const fill = custom?.fill || fillFor(payload, id);
+  return {
+    fill,
+    stroke: custom?.stroke || "#FFFFFF",
+  };
+}
+
 export type OkrugLegendItem = {
   band: OkrugBand;
   count: number;
