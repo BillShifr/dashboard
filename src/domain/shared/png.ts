@@ -5,8 +5,21 @@ export async function svgToPngBlob(
   width: number,
   height: number,
 ): Promise<Blob> {
+  let markup = svgMarkup;
+  if (markup.includes('href="/tfoms-logo.jpg"')) {
+    const response = await fetch("/tfoms-logo.jpg");
+    if (response.ok) {
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      markup = markup.replaceAll(
+        'href="/tfoms-logo.jpg"',
+        `href="data:image/jpeg;base64,${btoa(binary)}"`,
+      );
+    }
+  }
   const url = URL.createObjectURL(
-    new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" }),
+    new Blob([markup], { type: "image/svg+xml;charset=utf-8" }),
   );
   try {
     const img = new Image();

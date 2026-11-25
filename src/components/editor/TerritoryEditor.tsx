@@ -11,17 +11,13 @@ import { okrugSlideSections } from "@/components/editor/okrug-slide-sections";
 import { useConstructor } from "@/components/shell/constructor-context";
 import { mapDisplaySidebarItems } from "@/components/shell/map-display-sidebar";
 import type { MapDisplayViewId } from "@/components/shell/report-display-views";
+import { OKRUG_ORGS } from "@/domain/okrug/catalog";
+import { metricValue, templateOf } from "@/domain/okrug/bands";
+import { OrgPaintFields } from "@/components/editor/OrgPaintFields";
 import { defaultOkrugPayload } from "@/domain/presets/defaults";
 import type { OkrugPayload, TerritoryPayload } from "@/domain/presets/schema";
 import { Button } from "@/components/ui/button";
 import { downloadBlob, svgToPngBlob } from "@/domain/shared/png";
-import { NAMES, PALETTE } from "@/domain/territory/catalog/meta";
-import { facilities } from "@/domain/territory/catalog/facilities.js";
-import {
-  facilityColor,
-  parseValue,
-  scales,
-} from "@/domain/territory/medical/scales.js";
 import {
   buildOkrugPdfBlob,
   buildOkrugSvg,
@@ -35,22 +31,9 @@ import {
   territoryPngDimensions,
 } from "@/domain/territory/scene/export";
 
-type Facility = {
-  id: string;
-  index: number;
-  name: string;
-  city: string;
-};
-
-const FACILITIES = facilities as Facility[];
-const colorOf = facilityColor as (
-  record: { value: number | null; manual: string | null },
-  scale: string,
-) => string;
-const parse = parseValue as (text: string) => {
-  valid: boolean;
-  value: number | null;
-};
+function territoryMapPayload(payload: TerritoryPayload): TerritoryPayload {
+  return payload.mode === "med" ? { ...payload, mode: "geo" } : payload;
+}
 
 type Props = {
   presetId: string;
@@ -79,78 +62,31 @@ export function TerritoryEditor({
   version,
 }: Props) {
   const [selected, setSelected] = useState(0);
-  const [selectedFacility, setSelectedFacility] = useState(FACILITIES[0]!.id);
+  const [selectedOrg, setSelectedOrg] = useState(OKRUG_ORGS[0]!.id);
   const [zoom, setZoom] = useState(1);
-  const [query, setQuery] = useState("");
   const [exportBusy, setExportBusy] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const { setSections, setToolbar } = useConstructor();
 
-  const medical = payload.mode === "med";
-  const active = medical
-    ? (payload.records[selectedFacility] ?? { value: null, manual: null })
-    : payload.items[selected]!;
-  const activeFill = colorOf(
-    {
-      value: "value" in active ? active.value : null,
-      manual:
-        "manual" in active
-          ? active.manual
-          : ((active as { manual?: string | null }).manual ?? null),
-    },
-    payload.scale,
-  );
+  const viewMode = payload.mode === "hex" ? "hex" : "geo";
+  const mapPayload = territoryMapPayload(payload);
 
   const svg = useMemo(
     () =>
-      buildTerritorySvg(payload, true, {
-        selectedGroup: medical ? null : String(selected),
-        selectedFacility: medical ? selectedFacility : null,
+      buildTerritorySvg(territoryMapPayload(payload), true, {
+        selectedGroup: String(selected),
+        selectedFacility: selectedOrg,
       }),
-    [payload, medical, selected, selectedFacility],
+    [payload, selected, selectedOrg],
   );
-
-  const facilityList = useMemo(() => {
-    const q = query.toLocaleLowerCase("ru").replace(/ё/g, "е");
-    return FACILITIES.filter((f) =>
-      `${f.name} ${f.city} ${f.id}`
-        .toLocaleLowerCase("ru")
-        .replace(/ё/g, "е")
-        .includes(q),
-    );
-  }, [query]);
 
   function patch(partial: Partial<TerritoryPayload>) {
     onChange({ ...payload, ...partial });
   }
 
-  function setActiveManual(color: string | null) {
-    if (medical) {
-      patch({
-        records: {
-          ...payload.records,
-          [selectedFacility]: {
-            ...(payload.records[selectedFacility] ?? {
-              value: null,
-              manual: null,
-            }),
-            manual: color,
-          },
-        },
-      });
-      return;
-    }
-    const items = payload.items.map((item, i) =>
-      i === selected
-        ? { ...item, manual: color, color: color ?? item.color }
-        : item,
-    );
-    patch({ items });
-  }
-
   const honeycomb = payload.okrug ?? defaultOkrugPayload();
-  const honeycombView = payload.mode === "hex";
+  const honeycombView = viewMode === "hex";
 
   async function exportPng() {
     setExportBusy(true);
@@ -158,16 +94,16 @@ export function TerritoryEditor({
     try {
       const dims = honeycombView
         ? okrugPngDimensions()
-        : territoryPngDimensions(payload);
+        : territoryPngDimensions(mapPayload);
       const markup = honeycombView
         ? buildOkrugSvg(honeycomb, false)
-        : buildTerritorySvg(payload, false);
+        : buildTerritorySvg(mapPayload, false);
       const blob = await svgToPngBlob(markup, dims.width, dims.height);
       downloadBlob(
         blob,
         honeycombView
           ? okrugExportFilename(honeycomb, "png")
-          : territoryExportFilename(payload, "png"),
+          : territoryExportFilename(mapPayload, "png"),
       );
       setNotice("PNG готов");
     } catch {
@@ -184,10 +120,10 @@ export function TerritoryEditor({
       downloadBlob(
         honeycombView
           ? buildOkrugPdfBlob(honeycomb)
-          : buildTerritoryPdfBlob(payload),
+          : buildTerritoryPdfBlob(mapPayload),
         honeycombView
           ? okrugExportFilename(honeycomb, "pdf")
-          : territoryExportFilename(payload, "pdf"),
+          : territoryExportFilename(mapPayload, "pdf"),
       );
       setNotice("PDF готов");
     } catch {
@@ -227,23 +163,16 @@ export function TerritoryEditor({
       setZoom(1);
       return;
     }
-    if (next === "med") {
-      setMode("med");
-      return;
-    }
     setMode("geo");
   }
 
-  function setMode(next: TerritoryPayload["mode"]) {
-    const medicalBase =
-      next === "med" && payload.mode !== "med" ? "geo" : payload.medicalBase;
-    patch({ mode: next, medicalBase });
+  function setMode(next: "geo" | "hex") {
+    patch({ mode: next, medicalBase: "geo" });
     setZoom(1);
   }
 
   useLayoutEffect(() => {
-    const activeView: MapDisplayViewId =
-      payload.mode === "med" ? "med" : payload.mode === "hex" ? "hex" : "geo";
+    const activeView: MapDisplayViewId = viewMode;
     const display: {
       title: string;
       items: ReturnType<typeof mapDisplaySidebarItems>;
@@ -268,6 +197,7 @@ export function TerritoryEditor({
       const form = new FormData();
       form.append("file", file);
       form.append("expectedVersion", String(version));
+      form.append("draft", JSON.stringify(payload));
       const response = await fetch(`/api/presets/${presetId}/import-excel`, {
         method: "POST",
         body: form,
@@ -309,7 +239,10 @@ export function TerritoryEditor({
             size="sm"
             data-testid="save-preset"
             disabled={pending}
-            onClick={onSave}
+            onClick={() => {
+              setNotice(null);
+              onSave();
+            }}
           >
             {pending ? "Сохранение…" : "Сохранить отчёт"}
           </Button>
@@ -341,24 +274,6 @@ export function TerritoryEditor({
         ownToolbar={false}
         inspectorExtra={
           <>
-            <label className={styles.field}>
-              Шкала
-              <select
-                value={payload.scale}
-                disabled={disabled}
-                onChange={(e) =>
-                  patch({ scale: e.target.value as TerritoryPayload["scale"] })
-                }
-              >
-                {Object.entries(scales as Record<string, { name: string }>).map(
-                  ([id, scale]) => (
-                    <option key={id} value={id}>
-                      {scale.name}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
             <label className={styles.field}>
               Контур
               <input
@@ -401,7 +316,7 @@ export function TerritoryEditor({
     <div className={styles.shell}>
       <section className={styles.canvas} aria-label="Карта">
         <div className={styles.canvasHeader}>
-          <span>{medical ? `${FACILITIES.length} БУ` : "9 районов"}</span>
+          <span>Карта</span>
           <ZoomControl
             zoom={zoom}
             min={1}
@@ -414,195 +329,24 @@ export function TerritoryEditor({
           svg={svg}
           zoom={zoom}
           onSelectGroup={(id) => setSelected(Number(id))}
-          onSelectFacility={(id) => {
-            setSelectedFacility(id);
-            if (!medical) patch({ mode: "med" });
-          }}
+          onSelectFacility={setSelectedOrg}
         />
       </section>
 
       <aside className={styles.side}>
         <p className={styles.inspectorTitle}>Инспектор</p>
-        {medical ? (
-          <>
-            <label className={styles.field}>
-              Поиск учреждения
-              <input
-                type="search"
-                value={query}
-                disabled={disabled}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-            <div className={styles.list}>
-              {facilityList.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  aria-pressed={f.id === selectedFacility}
-                  disabled={disabled}
-                  onClick={() => setSelectedFacility(f.id)}
-                >
-                  <span
-                    className={styles.dot}
-                    style={{
-                      background: colorOf(
-                        payload.records[f.id] ?? {
-                          value: null,
-                          manual: null,
-                        },
-                        payload.scale,
-                      ),
-                    }}
-                  />
-                  <span>
-                    <strong>
-                      {f.index}. {f.name.replace(/^БУ /, "")}
-                    </strong>
-                    <br />
-                    <span className={styles.muted}>
-                      {f.city} · {f.id}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className={styles.list}>
-            {NAMES.map((name, i) => {
-              const fill = colorOf(payload.items[i]!, payload.scale);
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  aria-pressed={selected === i}
-                  disabled={disabled}
-                  onClick={() => setSelected(i)}
-                  style={{ background: fill, color: "#213A2C" }}
-                >
-                  <span className={styles.dot} style={{ background: fill }} />
-                  <span>
-                    {i + 1}. {name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <h2 style={{ margin: 0, fontSize: 18 }}>
-          {medical
-            ? FACILITIES.find((f) => f.id === selectedFacility)?.name.replace(
-                /^БУ /,
-                "",
-              )
-            : NAMES[selected]}
-        </h2>
-
-        {medical && (
-          <label className={styles.field}>
-            Основа
-            <select
-              value={payload.medicalBase}
-              disabled={disabled}
-              onChange={(e) =>
-                patch({
-                  medicalBase: e.target
-                    .value as TerritoryPayload["medicalBase"],
-                })
-              }
-            >
-              <option value="geo">Карта</option>
-              <option value="hex">Шестиугольники</option>
-            </select>
-          </label>
-        )}
-
-        <label className={styles.field}>
-          Шкала
-          <select
-            value={payload.scale}
-            disabled={disabled}
-            onChange={(e) =>
-              patch({ scale: e.target.value as TerritoryPayload["scale"] })
-            }
-          >
-            {Object.entries(scales as Record<string, { name: string }>).map(
-              ([id, scale]) => (
-                <option key={id} value={id}>
-                  {scale.name}
-                </option>
-              ),
-            )}
-          </select>
-        </label>
-
-        <label className={styles.field}>
-          Значение, %
-          <input
-            value={
-              ("value" in active ? active.value : null) === null
-                ? ""
-                : String(active.value).replace(".", ",")
-            }
-            disabled={disabled}
-            onChange={(e) => {
-              const parsed = parse(e.target.value);
-              if (!parsed.valid) return;
-              if (medical) {
-                patch({
-                  records: {
-                    ...payload.records,
-                    [selectedFacility]: {
-                      value: parsed.value,
-                      manual: null,
-                    },
-                  },
-                });
-              } else {
-                const items = payload.items.map((item, i) =>
-                  i === selected
-                    ? { ...item, value: parsed.value, manual: null }
-                    : item,
-                );
-                patch({ items });
-              }
-            }}
-          />
-        </label>
-
-        <label className={styles.field}>
-          Цвет
-          <input
-            type="color"
-            value={activeFill}
-            disabled={disabled}
-            onChange={(e) => setActiveManual(e.target.value)}
-          />
-        </label>
-        <div className={styles.swatches}>
-          {PALETTE.map((color) => (
-            <button
-              key={color}
-              type="button"
-              aria-label={color}
-              disabled={disabled}
-              style={{ background: color }}
-              onClick={() => setActiveManual(color)}
-            />
-          ))}
-        </div>
-        {active.manual && (
-          <button
-            type="button"
-            className={styles.ghost}
-            disabled={disabled}
-            onClick={() => setActiveManual(null)}
-          >
-            Авто по шкале
-          </button>
-        )}
+        <p className={styles.muted}>
+          {templateOf(honeycomb).shortName}:{" "}
+          {metricValue(honeycomb, selectedOrg) === null
+            ? "—"
+            : String(metricValue(honeycomb, selectedOrg)).replace(".", ",")}
+        </p>
+        <OrgPaintFields
+          payload={honeycomb}
+          orgId={selectedOrg}
+          disabled={disabled}
+          onChange={patchOkrug}
+        />
 
         <label className={styles.field}>
           Контур

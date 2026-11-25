@@ -1,5 +1,10 @@
 import { INSTITUTIONS } from "@/domain/disp/catalog";
 import { OKRUG_ORGS } from "@/domain/okrug/catalog";
+import {
+  DEFAULT_DENOMINATOR,
+  DEFAULT_NUMERATOR,
+  DEFAULT_SUMMARY,
+} from "@/domain/okrug/slide-chrome";
 import { OKRUG_TEMPLATE_BY_ID } from "@/domain/okrug/templates";
 import type {
   DispanserizationPayload,
@@ -65,6 +70,13 @@ export function defaultOkrugPayload(
         { doctors: null, mid: null, junior: null, oms: null },
       ]),
     ),
-    extras: { period: "", targetSalary: "", factSalary: "" },
+    extras: {
+      period: "",
+      targetSalary: "",
+      factSalary: "",
+      numerator: DEFAULT_NUMERATOR,
+      denominator: DEFAULT_DENOMINATOR,
+      summary: DEFAULT_SUMMARY,
+    },
   };
 }

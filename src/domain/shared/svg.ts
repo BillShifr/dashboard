@@ -41,6 +41,9 @@ export function shapesToSvg(
         : s.group
           ? (groupTitle?.(s.group) ?? "")
           : "";
+      if (s.image) {
+        return `<image href="${escapeXml(s.image.href)}" x="${s.image.x}" y="${s.image.y}" width="${s.image.w}" height="${s.image.h}" />`;
+      }
       const join = s.linejoin ?? "round";
       const stroke = s.stroke
         ? `stroke="${s.stroke}" stroke-width="${s.width}" stroke-linejoin="${join}"${join === "miter" ? ` stroke-miterlimit="8"` : ""}`

@@ -8,16 +8,31 @@ import {
   parseOkrugWorkbook,
 } from "@/domain/okrug/import/excel";
 import { defaultOkrugPayload } from "@/domain/presets/defaults";
-import type {
-  DispanserizationPayload,
-  OkrugPayload,
-  TerritoryPayload,
+import {
+  okrugPayloadSchema,
+  territoryPayloadSchema,
+  type DispanserizationPayload,
+  type OkrugPayload,
+  type TerritoryPayload,
 } from "@/domain/presets/schema";
 import { getPreset, updatePreset } from "@/domain/presets/service";
 import { currentUser } from "@/lib/auth";
 import { jsonError } from "@/lib/http";
 
 type Params = { params: Promise<{ id: string }> };
+
+function readDraft<T>(
+  value: FormDataEntryValue | null,
+  schema: z.ZodType<T>,
+): T | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = schema.safeParse(JSON.parse(value));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request, { params }: Params) {
   const user = await currentUser();
@@ -52,7 +67,9 @@ export async function POST(request: Request, { params }: Params) {
     if (preset.kind === "okrug" || preset.kind === "territory") {
       const imported = await parseOkrugWorkbook(buffer);
       if (preset.kind === "territory") {
-        const current = preset.payload as TerritoryPayload;
+        const current =
+          readDraft(form.get("draft"), territoryPayloadSchema) ??
+          (preset.payload as TerritoryPayload);
         const nextPayload: TerritoryPayload = {
           ...current,
           okrug: mergeOkrugImport(
@@ -71,7 +88,8 @@ export async function POST(request: Request, { params }: Params) {
         });
       }
       const nextPayload = mergeOkrugImport(
-        preset.payload as OkrugPayload,
+        readDraft(form.get("draft"), okrugPayloadSchema) ??
+          (preset.payload as OkrugPayload),
         imported,
       );
       const row = await updatePreset(user, id, {

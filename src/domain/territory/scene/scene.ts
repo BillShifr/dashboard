@@ -2,7 +2,13 @@ import {
   facilities,
   settlements,
 } from "@/domain/territory/catalog/facilities.js";
-import { hexLayout, polygonPath } from "@/domain/territory/catalog/geometry.js";
+import {
+  hexLayout,
+  hexPoints,
+  polygonPath,
+} from "@/domain/territory/catalog/geometry.js";
+import { OKRUG_ORGS } from "@/domain/okrug/catalog";
+import { legendCounts, metricValue, paintOf } from "@/domain/okrug/bands";
 import {
   CENTERS,
   CITIES,
@@ -74,6 +80,92 @@ const colorOf = facilityColor as (
 const valueText = formattedValue as (value: number | null) => string;
 const pathOf = markerPath as (m: Marker) => string;
 const SCALES = scales as Record<ScaleKey, { name: string; colors: string[] }>;
+
+/** МО со слайда, которых нет в каталоге 63 БУ. Город нужен только чтобы поставить маркер на карту. */
+const ORG_CITY: Record<string, string> = {
+  "810059": "Советский",
+  "810092": "Мегион",
+  "810146": "Пыть-Ях",
+  "810151": "Урай",
+  "810156": "Ханты-Мансийск",
+  "810225": "Югорск",
+  "810235": "Ханты-Мансийск",
+  "810399": "Нижневартовск",
+};
+
+const CITY_CENTER: Record<string, readonly [number, number]> = {
+  Советский: [80, 178],
+};
+
+function orgCity(id: string): string {
+  return (
+    FACILITIES.find((facility) => facility.id === id)?.city ??
+    ORG_CITY[id] ??
+    "Ханты-Мансийск"
+  );
+}
+
+function orgMapMarkers(
+  stepX = 14,
+  stepY = 16,
+): Array<{
+  id: string;
+  x: number;
+  y: number;
+}> {
+  const byCity = new Map<string, string[]>();
+  for (const org of OKRUG_ORGS) {
+    const city = orgCity(org.id);
+    byCity.set(city, [...(byCity.get(city) ?? []), org.id]);
+  }
+  const markers: Array<{ id: string; x: number; y: number }> = [];
+  for (const [city, ids] of byCity) {
+    const center =
+      SETTLEMENTS[city]?.center ?? CITY_CENTER[city] ?? CENTERS[8]!;
+    const cols = Math.min(4, Math.ceil(Math.sqrt(ids.length)));
+    const rows = Math.ceil(ids.length / cols);
+    ids.forEach((id, index) => {
+      const slot = city === "Сургут" && index >= 12 ? index + 2 : index;
+      markers.push({
+        id,
+        x: center[0] + ((slot % cols) - (cols - 1) / 2) * stepX,
+        y: center[1] + (Math.floor(index / cols) - (rows - 1) / 2) * stepY,
+      });
+    });
+  }
+  return markers;
+}
+
+function okrugLegend(state: TerritoryPayload, y = 318): Shape[] {
+  if (!state.okrug) return [];
+  const out: Shape[] = [];
+  legendCounts(state.okrug).forEach((entry, index) => {
+    const column = index % 2;
+    const row = Math.floor(index / 2);
+    const x = 12 + column * 250;
+    const cy = y + row * 16;
+    out.push({
+      d: polygonPath(hexPoints(x + 7, cy, 6) as [number, number][]),
+      fill: entry.band.color,
+      stroke: "#FFFFFF",
+      width: 0.6,
+    });
+    out.push(
+      textShape(
+        String(entry.count),
+        x + 7,
+        cy + 1.2,
+        5.5,
+        12,
+        contrast(entry.band.color),
+      ),
+    );
+    out.push(
+      textShape(entry.band.label, x + 20, cy + 1.2, 6, 210, "#1F2F26", "left"),
+    );
+  });
+  return out;
+}
 
 function isMedical(state: TerritoryPayload): boolean {
   return state.mode === "med";
@@ -191,9 +283,11 @@ export function scene(
 ): TerritoryScene {
   const shapes: Shape[] = [];
   const medical = isMedical(state);
+  const okrugMap = !medical && state.mode === "geo" && Boolean(state.okrug);
 
   for (let i = 0; i < 9; i++) {
-    const fill = medical ? "#EDF0F1" : colorOf(state.items[i]!, state.scale);
+    const fill =
+      medical || okrugMap ? "#E7EEE9" : colorOf(state.items[i]!, state.scale);
     shapes.push({
       d: geometry(state, i).d,
       fill,
@@ -206,7 +300,23 @@ export function scene(
 
   let height = 340;
 
-  if (medical) {
+  if (medical && state.okrug) {
+    for (const marker of orgMapMarkers(16, 18)) {
+      const paint = paintOf(state.okrug, marker.id);
+      shapes.push({
+        d: polygonPath(
+          hexPoints(marker.x, marker.y, 6.4) as [number, number][],
+        ),
+        fill: paint.fill,
+        stroke: paint.stroke,
+        width: 0.9,
+        facility: marker.id,
+      });
+    }
+    shapes.push(...okrugLegend(state));
+    const rows = Math.ceil(legendCounts(state.okrug).length / 2);
+    height = 328 + rows * 16;
+  } else if (medical) {
     const currentMarkers = MARKERS[state.medicalBase];
     if (state.medicalBase === "geo") {
       const occupied: [number, number, number, number][] = currentMarkers.map(
@@ -261,18 +371,20 @@ export function scene(
         value: null,
         manual: null,
       }) as TerritoryRecord;
-      const fill = colorOf(record, state.scale);
+      const paint = state.okrug ? paintOf(state.okrug, m.id) : null;
+      const fill = paint?.fill ?? colorOf(record, state.scale);
+      const shown = state.okrug ? metricValue(state.okrug, m.id) : record.value;
       const ink = contrast(fill);
       shapes.push({
         d: pathOf(m),
         fill,
-        stroke: "#FFFFFF",
+        stroke: paint?.stroke ?? "#FFFFFF",
         width: 1,
         facility: m.id,
       });
       shapes.push({
         ...textShape(
-          valueText(record.value),
+          valueText(shown),
           m.x,
           m.y + (m.size ? m.size * 0.1 : 1.7),
           m.size || 5.3,
@@ -336,6 +448,22 @@ export function scene(
       }
       height = Math.ceil(bottom + 30);
     }
+  } else if (okrugMap && state.okrug) {
+    for (const marker of orgMapMarkers()) {
+      const paint = paintOf(state.okrug, marker.id);
+      shapes.push({
+        d: polygonPath(
+          hexPoints(marker.x, marker.y, 5.2) as [number, number][],
+        ),
+        fill: paint.fill,
+        stroke: paint.stroke,
+        width: 0.8,
+        facility: marker.id,
+      });
+    }
+    shapes.push(...okrugLegend(state));
+    const rows = Math.ceil(legendCounts(state.okrug).length / 2);
+    height = 328 + rows * 16;
   } else {
     shapes.push(...legendBands(state));
     height = 350;

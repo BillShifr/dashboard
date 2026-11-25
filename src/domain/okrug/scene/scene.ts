@@ -5,12 +5,7 @@ import {
   orgHex,
   type OkrugSlideNo,
 } from "@/domain/okrug/catalog";
-import {
-  fillFor,
-  legendCounts,
-  okrugKpis,
-  templateOf,
-} from "@/domain/okrug/bands";
+import { legendCounts, paintOf, templateOf } from "@/domain/okrug/bands";
 import type { OkrugPayload } from "@/domain/presets/schema";
 import { contrast } from "@/domain/shared/color";
 import {
@@ -18,10 +13,10 @@ import {
   officeHexagonFromEmu,
   polygonPath,
 } from "@/domain/shared/geometry";
+import { drawSlideChrome, resolveChrome } from "@/domain/okrug/slide-chrome";
 import { textShape } from "@/domain/shared/text";
 import type { Shape } from "@/domain/shared/types";
 
-const TITLE_MAX = 800;
 /** Единая геометрия сот региона — как на слайде 1; легенда остаётся по номеру слайда. */
 const OKRUG_MAP_LAYOUT_SLIDE: OkrugSlideNo = 1;
 
@@ -57,6 +52,7 @@ function pptHex(
 export function okrugScene(
   payload: OkrugPayload,
   selectedId: string | null = null,
+  options: { interactive?: boolean } = {},
 ): { shapes: Shape[]; width: number; height: number } {
   const template = templateOf(payload);
   const legendSlide = template.slide as OkrugSlideNo;
@@ -68,27 +64,23 @@ export function okrugScene(
   ];
 
   shapes.push(
-    textShape(
-      payload.title || template.defaultTitle,
-      8,
-      24,
-      14,
-      TITLE_MAX,
-      "#2F5496",
-      "left",
+    ...drawSlideChrome(
+      resolveChrome({
+        title: payload.title || template.defaultTitle,
+        numerator: payload.extras.numerator,
+        denominator: payload.extras.denominator,
+        summary: payload.extras.summary,
+      }),
+      { text: !options.interactive },
     ),
   );
 
   for (const org of OKRUG_ORGS) {
     const box = orgHex(org.id, OKRUG_MAP_LAYOUT_SLIDE);
-    const fill = fillFor(payload, org.id);
+    const paint = paintOf(payload, org.id);
+    const fill = paint.fill;
     const ink = contrast(fill);
-    const stroke =
-      selectedId === org.id
-        ? "#1F2F26"
-        : fill.toLowerCase() === "#ffffff"
-          ? "#C8CFC8"
-          : "#FFFFFF";
+    const stroke = selectedId === org.id ? "#1F2F26" : paint.stroke;
     shapes.push(
       pptHex(
         box.points,
@@ -142,26 +134,6 @@ export function okrugScene(
     const { x: labelX, align: labelAlign } = legendLabelX(x, w);
     shapes.push(textShape(label, labelX, ly, 7.2, 220, "#1F2F26", labelAlign));
   });
-
-  if (template.showKpi) {
-    const kpi = okrugKpis(payload);
-    const boxX = 720;
-    const rows = [
-      `${kpi.inRange} попали в диапазон`,
-      `${kpi.below} не попали в диапазон`,
-      `${kpi.above} превысили диапазон`,
-      `Доля вне диапазона ${kpi.outShare}%`,
-      kpi.average === null
-        ? "Нет среднего — импортируйте Excel"
-        : `Среднее по МО ${kpi.average}${template.unit}`,
-    ];
-    if (payload.extras.period) rows.push(payload.extras.period);
-    rows.forEach((line, i) => {
-      shapes.push(
-        textShape(line, boxX, 360 + i * 16, 7, 220, "#1F2F26", "left"),
-      );
-    });
-  }
 
   return {
     shapes,

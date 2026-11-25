@@ -48,6 +48,86 @@
   height: auto;
 }
 
+.slideOverlay {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  pointer-events: none;
+}
+
+.slideTitle,
+.slideFormula,
+.slideCell {
+  position: absolute;
+  pointer-events: auto;
+  border: 0;
+  margin: 0;
+  padding: 0 2px;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+}
+
+.slideTitle,
+.slideFormula {
+  color: #2f5496;
+  font-size: calc(11 * 100cqw / 960);
+  line-height: 1.15;
+}
+
+.slideTitle {
+  font-size: calc(13 * 100cqw / 960);
+  font-weight: 600;
+}
+
+.slideCell {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  line-height: 1.15;
+  padding: 0 3px;
+}
+
+textarea.slideCell {
+  white-space: pre-wrap;
+}
+
+.slideTools {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
+  color: var(--foreground);
+  font-size: 13px;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.slideTools input[type="number"] {
+  width: 3.2rem;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.slideTools button {
+  height: 28px;
+  min-width: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  font-weight: 700;
+}
+
+.slideTools button[aria-pressed="true"] {
+  background: var(--accent);
+}
+
 .side {
   display: grid;
   align-content: start;

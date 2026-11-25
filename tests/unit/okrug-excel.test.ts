@@ -22,6 +22,22 @@ describe("okrug excel import", () => {
     ).not.toThrow();
   });
 
+  it("keeps a manual fill and stroke when excel replaces the metric", async () => {
+    const imported = await parseOkrugWorkbook(
+      await load("salary-doctors.xlsx"),
+    );
+    const painted = defaultOkrugPayload();
+    painted.extras.appearance = {
+      "810001": { fill: "#112233", stroke: "#445566" },
+    };
+    const payload = mergeOkrugImport(painted, imported);
+    expect(payload.extras.appearance?.["810001"]).toEqual({
+      fill: "#112233",
+      stroke: "#445566",
+    });
+    expect(payload.records["810001"]?.doctors).not.toBeNull();
+  });
+
   it("colors doctors achievement as on slide 1", async () => {
     const imported = await parseOkrugWorkbook(
       await load("salary-doctors.xlsx"),

@@ -30,6 +30,33 @@ export const okrugPayloadSchema = z.object({
     period: z.string().max(200),
     targetSalary: z.string().max(40),
     factSalary: z.string().max(40),
+    numerator: z.string().max(300).optional(),
+    denominator: z.string().max(300).optional(),
+    appearance: z
+      .record(
+        z.string(),
+        z.object({
+          fill: hexColor.nullable(),
+          stroke: hexColor.nullable(),
+        }),
+      )
+      .optional(),
+    summary: z
+      .array(
+        z
+          .array(
+            z.object({
+              text: z.string().max(160),
+              bold: z.boolean(),
+              size: z.number().min(8).max(28),
+              color: hexColor,
+              fill: hexColor,
+            }),
+          )
+          .max(6),
+      )
+      .max(8)
+      .optional(),
   }),
 });
 
