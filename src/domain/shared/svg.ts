@@ -28,7 +28,7 @@ export function shapesToSvg(
     ariaLabel = "Карта Югры",
   }: ShapesToSvgOptions = {},
 ): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${svgWidth}" height="${svgHeight}" role="group" aria-label="${escapeXml(ariaLabel)}">${shapes
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${viewBox}" width="${svgWidth}" height="${svgHeight}" role="group" aria-label="${escapeXml(ariaLabel)}">${shapes
     .map((s) => {
       const target = s.facility
         ? `data-facility="${s.facility}"`
@@ -42,7 +42,7 @@ export function shapesToSvg(
           ? (groupTitle?.(s.group) ?? "")
           : "";
       if (s.image) {
-        return `<image href="${escapeXml(s.image.href)}" x="${s.image.x}" y="${s.image.y}" width="${s.image.w}" height="${s.image.h}" />`;
+        return `<image href="${escapeXml(s.image.href)}" xlink:href="${escapeXml(s.image.href)}" x="${s.image.x}" y="${s.image.y}" width="${s.image.w}" height="${s.image.h}" preserveAspectRatio="xMidYMid meet" />`;
       }
       const join = s.linejoin ?? "round";
       const stroke = s.stroke

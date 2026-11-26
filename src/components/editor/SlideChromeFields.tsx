@@ -5,6 +5,7 @@ import {
   DEFAULT_DENOMINATOR,
   DEFAULT_NUMERATOR,
   DEFAULT_SUMMARY,
+  SLIDE_LOGO,
   summaryPlacements,
   wrapSlideText,
   type SlideCell,
@@ -47,6 +48,16 @@ export function SlideChromeFields({
 
   return (
     <div className={styles.slideOverlay}>
+      {/* JPEG from the PowerPoint slide; next/image does not fit the overlay coords. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className={styles.slideLogo}
+        src={SLIDE_LOGO.href}
+        alt="ТФОМС Югры"
+        width={SLIDE_LOGO.w}
+        height={SLIDE_LOGO.h}
+        style={box(SLIDE_LOGO.x, SLIDE_LOGO.y, SLIDE_LOGO.w, SLIDE_LOGO.h)}
+      />
       <textarea
         className={styles.slideTitle}
         style={box(8, 8, 800, 56)}

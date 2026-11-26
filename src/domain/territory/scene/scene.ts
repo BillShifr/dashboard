@@ -7,8 +7,14 @@ import {
   hexPoints,
   polygonPath,
 } from "@/domain/territory/catalog/geometry.js";
-import { OKRUG_ORGS } from "@/domain/okrug/catalog";
-import { legendCounts, metricValue, paintOf } from "@/domain/okrug/bands";
+import { OKRUG_ORGS, OKRUG_SLIDE_SIZE } from "@/domain/okrug/catalog";
+import {
+  legendCounts,
+  metricValue,
+  paintOf,
+  templateOf,
+} from "@/domain/okrug/bands";
+import { drawSlideChrome, resolveChrome } from "@/domain/okrug/slide-chrome";
 import {
   CENTERS,
   CITIES,
@@ -274,12 +280,70 @@ function legendBands(state: TerritoryPayload, y = 309): Shape[] {
 export type TerritoryScene = {
   shapes: Shape[];
   height: number;
+  width?: number;
 };
+
+const MAP_SOURCE = { x: 8, y: 48, w: 492, h: 252 };
+const MAP_SLOT = { x: 28, y: 118, w: 568, h: 318 };
+
+function pathScale(): number {
+  return Math.min(MAP_SLOT.w / MAP_SOURCE.w, MAP_SLOT.h / MAP_SOURCE.h);
+}
+
+function transformPath(
+  d: string,
+  scale: number,
+  dx: number,
+  dy: number,
+): string {
+  let out = "";
+  for (const match of d.matchAll(/([MLCQZHV])([^MLCQZHV]*)/g)) {
+    const command = match[1]!;
+    const nums = (match[2]!.match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+    if (command === "Z") {
+      out += "Z";
+      continue;
+    }
+    const mapped = nums.map((value, index) => {
+      if (command === "H") return value * scale + dx;
+      if (command === "V") return value * scale + dy;
+      return index % 2 === 0 ? value * scale + dx : value * scale + dy;
+    });
+    out += command + mapped.map((value) => Number(value.toFixed(3))).join(",");
+  }
+  return out || d;
+}
+
+function fitMapShape(shape: Shape): Shape {
+  const scale = pathScale();
+  const dx = MAP_SLOT.x - MAP_SOURCE.x * scale;
+  const dy = MAP_SLOT.y - MAP_SOURCE.y * scale;
+  const next: Shape = {
+    ...shape,
+    d: transformPath(shape.d, scale, dx, dy),
+  };
+  if (shape.width) next.width = Number((shape.width * scale).toFixed(3));
+  if (shape.bbox) {
+    const [x0, y0, x1, y1] = shape.bbox;
+    next.bbox = [
+      x0 * scale + dx,
+      y0 * scale + dy,
+      x1 * scale + dx,
+      y1 * scale + dy,
+    ];
+  }
+  return next;
+}
+
+function isIncidentSlide(state: TerritoryPayload): boolean {
+  return Boolean(state.okrug) && state.mode === "geo";
+}
 
 /** Build vector shapes for geo / hex / medical territory modes (HTML `scene`). */
 export function scene(
   state: TerritoryPayload,
   includeRoster = false,
+  options: { interactive?: boolean } = {},
 ): TerritoryScene {
   const shapes: Shape[] = [];
   const medical = isMedical(state);
@@ -461,12 +525,37 @@ export function scene(
         facility: marker.id,
       });
     }
-    shapes.push(...okrugLegend(state));
-    const rows = Math.ceil(legendCounts(state.okrug).length / 2);
-    height = 328 + rows * 16;
+    height = 328;
   } else {
     shapes.push(...legendBands(state));
     height = 350;
+  }
+
+  if (isIncidentSlide(state) && state.okrug) {
+    const template = templateOf(state.okrug);
+    const fitted = shapes.map(fitMapShape);
+    const slide: Shape[] = [
+      {
+        d: rectPath(0, 0, OKRUG_SLIDE_SIZE.width, OKRUG_SLIDE_SIZE.height),
+        fill: "#FFFFFF",
+      },
+      ...drawSlideChrome(
+        resolveChrome({
+          title: state.okrug.title || template.defaultTitle,
+          numerator: state.okrug.extras.numerator,
+          denominator: state.okrug.extras.denominator,
+          summary: state.okrug.extras.summary,
+        }),
+        { text: !options.interactive },
+      ),
+      ...fitted,
+      ...okrugLegend(state, 448),
+    ];
+    return {
+      shapes: slide,
+      width: OKRUG_SLIDE_SIZE.width,
+      height: OKRUG_SLIDE_SIZE.height,
+    };
   }
 
   return { shapes, height };

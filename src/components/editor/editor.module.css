@@ -55,6 +55,12 @@
   pointer-events: none;
 }
 
+.slideLogo {
+  position: absolute;
+  pointer-events: none;
+  object-fit: contain;
+}
+
 .slideTitle,
 .slideFormula,
 .slideCell {
