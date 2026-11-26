@@ -46,6 +46,9 @@ describe("okrug scene", () => {
     expect(shapes.some((shape) => shape.label === DEFAULT_NUMERATOR)).toBe(
       true,
     );
+    expect(
+      shapes.some((shape) => shape.image?.href === "/tfoms-logo.jpg"),
+    ).toBe(true);
   });
 
   it("places legend captions to the right of swatches", () => {

@@ -14,6 +14,10 @@ import type { MapDisplayViewId } from "@/components/shell/report-display-views";
 import { OKRUG_ORGS } from "@/domain/okrug/catalog";
 import { metricValue, templateOf } from "@/domain/okrug/bands";
 import { OrgPaintFields } from "@/components/editor/OrgPaintFields";
+import {
+  SlideCellTools,
+  SlideChromeFields,
+} from "@/components/editor/SlideChromeFields";
 import { defaultOkrugPayload } from "@/domain/presets/defaults";
 import type { OkrugPayload, TerritoryPayload } from "@/domain/presets/schema";
 import { Button } from "@/components/ui/button";
@@ -63,6 +67,10 @@ export function TerritoryEditor({
 }: Props) {
   const [selected, setSelected] = useState(0);
   const [selectedOrg, setSelectedOrg] = useState(OKRUG_ORGS[0]!.id);
+  const [summaryCell, setSummaryCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [exportBusy, setExportBusy] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
@@ -316,12 +324,11 @@ export function TerritoryEditor({
     <div className={styles.shell}>
       <section className={styles.canvas} aria-label="Карта">
         <div className={styles.canvasHeader}>
-          <span>Карта</span>
           <ZoomControl
             zoom={zoom}
-            min={1}
-            max={3}
-            step={0.5}
+            min={0.6}
+            max={1.8}
+            step={0.1}
             onChange={setZoom}
           />
         </div>
@@ -330,11 +337,26 @@ export function TerritoryEditor({
           zoom={zoom}
           onSelectGroup={(id) => setSelected(Number(id))}
           onSelectFacility={setSelectedOrg}
+          overlay={
+            <SlideChromeFields
+              payload={honeycomb}
+              disabled={disabled}
+              onChange={patchOkrug}
+              picked={summaryCell}
+              onPick={setSummaryCell}
+            />
+          }
         />
       </section>
 
       <aside className={styles.side}>
         <p className={styles.inspectorTitle}>Инспектор</p>
+        <SlideCellTools
+          payload={honeycomb}
+          disabled={disabled}
+          onChange={patchOkrug}
+          picked={summaryCell}
+        />
         <p className={styles.muted}>
           {templateOf(honeycomb).shortName}:{" "}
           {metricValue(honeycomb, selectedOrg) === null

@@ -22,7 +22,9 @@ describe("territory scene", () => {
   });
 
   it("draws every medical organization on the district map", () => {
-    const { shapes } = scene(defaultTerritoryPayload());
+    const { shapes, width, height } = scene(defaultTerritoryPayload());
+    expect(width).toBe(960);
+    expect(height).toBe(540);
     const ids = new Set(
       shapes.map((shape) => shape.facility).filter((id) => id != null),
     );
@@ -58,10 +60,22 @@ describe("territory scene", () => {
     ).toBe("yugra-medical-hex.png");
   });
 
-  it("png dimensions are 2160 by sceneHeight*4", () => {
+  it("uses the 16:9 slide for the incident map", () => {
     const dims = territoryPngDimensions(defaultTerritoryPayload());
-    expect(dims.width).toBe(2160);
-    expect(dims.height).toBe(dims.sceneHeight * 4);
+    expect(dims.width).toBe(1920);
+    expect(dims.height).toBe(1080);
+    expect(dims.sceneHeight).toBe(540);
+    const { shapes } = scene(defaultTerritoryPayload());
+    expect(
+      shapes.some(
+        (shape) =>
+          shape.label ===
+          "средняя фактическая ЗП по категории за 9 месяцев 2026 года",
+      ),
+    ).toBe(true);
+    expect(
+      shapes.some((shape) => shape.image?.href === "/tfoms-logo.jpg"),
+    ).toBe(true);
   });
 
   it("names incident views without the old object counts", () => {

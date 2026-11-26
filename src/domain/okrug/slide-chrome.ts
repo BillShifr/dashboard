@@ -212,11 +212,13 @@ export function drawSlideChrome(
     stroke: "#70AD47",
     width: 3,
   });
-  shapes.push({
-    d: "M0,0",
-    fill: "none",
-    image: { ...SLIDE_LOGO },
-  });
+  if (options.text) {
+    shapes.push({
+      d: "M0,0",
+      fill: "none",
+      image: { ...SLIDE_LOGO },
+    });
+  }
 
   shapes.push(textShape("=", 10, 96, 11, 20, "#2F5496", "left"));
   shapes.push({
